@@ -21,6 +21,7 @@ import {
   IconChartDots,
   IconDeviceFloppy,
   IconDeviceLaptop,
+  IconFlame,
   IconLayoutGrid,
   IconSettings,
   IconSitemap,
@@ -87,6 +88,12 @@ const NAV_LINKS: NavLinkConfig[] = [
     label: 'Client Sessions',
     href: '/sessions',
     icon: <IconDeviceLaptop size={16} />,
+  },
+  {
+    id: 'continuous-profiling',
+    label: 'Continuous Profiling',
+    href: '/continuous-profiling',
+    icon: <IconFlame size={16} />,
   },
   {
     id: 'service-map',

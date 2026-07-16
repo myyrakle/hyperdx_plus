@@ -21,6 +21,7 @@ import ApiKeysSection from './components/TeamSettings/ApiKeysSection';
 import ConnectionsSection from './components/TeamSettings/ConnectionsSection';
 import IntegrationsSection from './components/TeamSettings/IntegrationsSection';
 import McpServerSection from './components/TeamSettings/McpServerSection';
+import ProfilingConnectionsSection from './components/TeamSettings/ProfilingConnectionsSection';
 import SecurityPoliciesSection from './components/TeamSettings/SecurityPoliciesSection';
 import SourcesSection from './components/TeamSettings/SourcesSection';
 import TeamMembersSection from './components/TeamSettings/TeamMembersSection';
@@ -101,6 +102,10 @@ export default function TeamPage() {
         {
           id: 'team-data-connections',
           content: <ConnectionsSection />,
+        },
+        {
+          id: 'team-profiling-connections',
+          content: <ProfilingConnectionsSection />,
         },
       ],
     },

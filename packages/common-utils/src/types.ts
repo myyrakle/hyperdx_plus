@@ -1637,6 +1637,21 @@ export const ConnectionSchema = z.object({
 
 export type Connection = z.infer<typeof ConnectionSchema>;
 
+export const ProfilingAuthTypeSchema = z.enum(['none', 'basic', 'bearer']);
+export type ProfilingAuthType = z.infer<typeof ProfilingAuthTypeSchema>;
+
+export const ProfilingConnectionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  endpoint: z.string().url(),
+  tenantId: z.string().optional(),
+  authType: ProfilingAuthTypeSchema,
+  username: z.string().optional(),
+  hasSecret: z.boolean(),
+  enabled: z.boolean(),
+});
+export type ProfilingConnection = z.infer<typeof ProfilingConnectionSchema>;
+
 export const TeamClickHouseSettingsSchema = z.object({
   fieldMetadataDisabled: z.boolean().optional(),
   searchRowLimit: z.number().optional(),
