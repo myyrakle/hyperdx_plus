@@ -17,6 +17,7 @@ import {
 import { notifications } from '@mantine/notifications';
 
 import {
+  getProfilingConnectionFormState,
   ProfilingConnectionInput,
   useDeleteProfilingConnection,
   useProfilingConnections,
@@ -55,6 +56,8 @@ function ProfilingConnectionForm({
   const save = useSaveProfilingConnection();
   const testConnection = useTestProfilingConnection();
   const remove = useDeleteProfilingConnection();
+  const { canReuseSecret, requiresSecret, canTest, canSubmit } =
+    getProfilingConnectionFormState(value, connection);
 
   const update = <K extends keyof ProfilingConnectionInput>(
     key: K,
@@ -107,15 +110,15 @@ function ProfilingConnectionForm({
       )}
       {value.authType !== 'none' && (
         <PasswordInput
-          label={connection?.hasSecret ? 'Replace secret' : 'Secret'}
+          label={canReuseSecret ? 'Replace secret' : 'Secret'}
           description={
-            connection?.hasSecret
+            canReuseSecret
               ? 'Leave blank to keep the currently configured secret.'
               : undefined
           }
           value={value.secret ?? ''}
           onChange={event => update('secret', event.currentTarget.value)}
-          required={!connection?.hasSecret}
+          required={requiresSecret}
         />
       )}
       <Switch
@@ -151,7 +154,7 @@ function ProfilingConnectionForm({
           <Button
             variant="secondary"
             loading={testConnection.isPending}
-            disabled={!value.endpoint}
+            disabled={!canTest}
             onClick={async () => {
               try {
                 await testConnection.mutateAsync({
@@ -185,7 +188,7 @@ function ProfilingConnectionForm({
           <Button
             variant="primary"
             loading={save.isPending}
-            disabled={!value.name || !value.endpoint}
+            disabled={!canSubmit}
             onClick={() =>
               save.mutate(
                 { id: connection?.id, input: value },

@@ -1,7 +1,7 @@
 import express from 'express';
 import { performance } from 'perf_hooks';
 import { z } from 'zod';
-import { validateRequest } from 'zod-express-middleware';
+import { processRequest } from 'zod-express-middleware';
 
 import { CODE_VERSION } from '@/config';
 import {
@@ -28,8 +28,9 @@ const connectionSettingsSchema = z
     endpoint: z.string().url(),
     tenantId: z.string().trim().max(150).optional(),
     authType: authTypeSchema,
-    username: z.string().max(200).optional(),
+    username: z.string().trim().max(200).optional(),
     secret: z.string().max(10_000).optional(),
+    connectionId: objectIdSchema.optional(),
   })
   .superRefine((value, context) => {
     const url = new URL(value.endpoint);
@@ -62,7 +63,7 @@ const connectionBodySchema = z
     endpoint: z.string().url(),
     tenantId: z.string().trim().max(150).optional(),
     authType: authTypeSchema,
-    username: z.string().max(200).optional(),
+    username: z.string().trim().max(200).optional(),
     secret: z.string().max(10_000).optional(),
     enabled: z.boolean().default(true),
   })
@@ -126,11 +127,7 @@ router.get('/', async (req, res, next) => {
 
 router.post(
   '/test',
-  validateRequest({
-    body: connectionSettingsSchema.and(
-      z.object({ connectionId: objectIdSchema.optional() }),
-    ),
-  }),
+  processRequest({ body: connectionSettingsSchema }),
   async (req, res, next) => {
     const startedAt = performance.now();
     try {
@@ -219,7 +216,7 @@ router.post(
 
 router.post(
   '/',
-  validateRequest({ body: connectionBodySchema }),
+  processRequest({ body: connectionBodySchema }),
   async (req, res, next) => {
     try {
       const { teamId } = getNonNullUserWithTeam(req);
@@ -229,8 +226,10 @@ router.post(
           .json({ error: 'Secret is required for authentication' });
         return;
       }
+      const { username, secret, ...connectionSettings } = req.body;
       const connection = await createProfilingConnection(teamId.toString(), {
-        ...req.body,
+        ...connectionSettings,
+        ...(req.body.authType === 'none' ? {} : { username, secret }),
         enabled: req.body.enabled ?? true,
       });
       res.status(201).json(serializeConnection(connection));
@@ -242,7 +241,7 @@ router.post(
 
 router.put(
   '/:id',
-  validateRequest({
+  processRequest({
     params: z.object({ id: objectIdSchema }),
     body: connectionBodySchema,
   }),
@@ -288,7 +287,7 @@ router.put(
 
 router.delete(
   '/:id',
-  validateRequest({ params: z.object({ id: objectIdSchema }) }),
+  processRequest({ params: z.object({ id: objectIdSchema }) }),
   async (req, res, next) => {
     try {
       const { teamId } = getNonNullUserWithTeam(req);
@@ -305,7 +304,7 @@ router.delete(
 
 router.use(
   '/:id/proxy',
-  validateRequest({ params: z.object({ id: objectIdSchema }) }),
+  processRequest({ params: z.object({ id: objectIdSchema }) }),
   profilingProxyHandler,
 );
 

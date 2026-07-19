@@ -8,6 +8,27 @@ export type ProfilingConnectionInput = Omit<
   'id' | 'hasSecret'
 > & { secret?: string };
 
+export function getProfilingConnectionFormState(
+  input: ProfilingConnectionInput,
+  connection?: ProfilingConnection,
+) {
+  const canReuseSecret =
+    connection?.hasSecret === true && connection.authType === input.authType;
+  const requiresSecret = input.authType !== 'none' && !canReuseSecret;
+  const hasRequiredUsername =
+    input.authType !== 'basic' || Boolean(input.username?.trim());
+  const hasRequiredSecret = !requiresSecret || Boolean(input.secret);
+  const canTest =
+    Boolean(input.endpoint.trim()) && hasRequiredUsername && hasRequiredSecret;
+
+  return {
+    canReuseSecret,
+    requiresSecret,
+    canTest,
+    canSubmit: Boolean(input.name.trim()) && canTest,
+  };
+}
+
 export function useProfilingConnections() {
   return useQuery<ProfilingConnection[]>({
     queryKey: ['profiling-connections'],

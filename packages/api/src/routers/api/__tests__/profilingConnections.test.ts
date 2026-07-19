@@ -126,7 +126,7 @@ describe('profiling connections', () => {
         endpoint: 'http://pyroscope:4040',
         tenantId: 'team-profiles',
         authType: 'basic',
-        username: 'hyperdx',
+        username: '  hyperdx  ',
         secret: 'server-only-password',
       })
       .expect(200, { success: true });
@@ -141,6 +141,43 @@ describe('profiling connections', () => {
       ).toString('base64')}`,
       'x-scope-orgid': 'team-profiles',
     });
+  });
+
+  it('rejects whitespace-only basic authentication usernames', async () => {
+    const { agent } = await getLoggedInAgent(server);
+
+    await agent
+      .post('/profiling-connections')
+      .send({
+        name: 'Invalid basic auth',
+        endpoint: 'http://pyroscope:4040',
+        authType: 'basic',
+        username: '   ',
+        secret: 'password',
+      })
+      .expect(400);
+  });
+
+  it('does not persist credentials when authentication is disabled', async () => {
+    const { agent, team } = await getLoggedInAgent(server);
+
+    const response = await agent
+      .post('/profiling-connections')
+      .send({
+        name: 'Anonymous profiles',
+        endpoint: 'http://pyroscope:4040',
+        authType: 'none',
+        username: 'accidental-user',
+        secret: 'accidental-secret',
+      })
+      .expect(201);
+
+    const connection = await ProfilingConnection.findOne({
+      _id: response.body.id,
+      team: team._id,
+    }).select('+secret');
+    expect(connection?.username).toBeUndefined();
+    expect(connection?.secret).toBeUndefined();
   });
 
   it('reuses an existing team connection secret when testing an edit', async () => {
