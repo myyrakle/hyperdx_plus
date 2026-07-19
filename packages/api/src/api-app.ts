@@ -53,6 +53,10 @@ if (!config.IS_CI && config.FRONTEND_URL) {
 
 app.disable('x-powered-by');
 app.use(compression());
+app.use(
+  '/profiling-connections/:id/proxy',
+  express.raw({ type: '*/*', limit: '32mb' }),
+);
 app.use(express.json({ limit: '32mb' }));
 app.use(express.text({ limit: '32mb' }));
 app.use(express.urlencoded({ extended: false, limit: '32mb' }));

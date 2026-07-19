@@ -303,6 +303,10 @@ router.delete(
   },
 );
 
-router.use('/:id/proxy', profilingProxyHandler);
+router.use(
+  '/:id/proxy',
+  validateRequest({ params: z.object({ id: objectIdSchema }) }),
+  profilingProxyHandler,
+);
 
 export default router;

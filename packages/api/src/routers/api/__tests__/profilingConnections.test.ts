@@ -20,6 +20,12 @@ function fakeUpstreamResponse(
     status,
     headers: new Headers({ 'content-type': contentType }),
     arrayBuffer: jest.fn().mockResolvedValue(encoded.buffer),
+    body: new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoded);
+        controller.close();
+      },
+    }),
   };
 }
 
@@ -218,6 +224,120 @@ describe('profiling connections', () => {
     expect(mockFetch.mock.calls[0][0].toString()).toBe(
       'http://pyroscope:4040/',
     );
+  });
+
+  it('rewrites attributed Pyroscope head tags without dropping attributes', async () => {
+    mockFetch.mockResolvedValueOnce(
+      fakeUpstreamResponse(
+        '<html><HEAD data-app="pyroscope"><title>Profiles</title></HEAD></html>',
+        'text/html',
+      ) as any,
+    );
+    const { agent, team } = await getLoggedInAgent(server);
+    const connection = await ProfilingConnection.create({
+      team: team._id,
+      name: 'Profiles UI',
+      endpoint: 'http://pyroscope:4040',
+      authType: 'none',
+    });
+
+    const response = await agent
+      .get(`/profiling-connections/${connection._id}/proxy/`)
+      .expect(200);
+
+    expect(response.text).toContain('<HEAD data-app="pyroscope">');
+    expect(response.text).toContain(
+      `<base href="/api/profiling-connections/${connection._id}/proxy/" />`,
+    );
+    expect(response.text).toContain('hyperdx:set-theme');
+    expect(response.text).toContain('.navbar > :last-child');
+  });
+
+  it('rejects normalized traversal paths before calling Pyroscope', async () => {
+    const { agent, team } = await getLoggedInAgent(server);
+    const connection = await ProfilingConnection.create({
+      team: team._id,
+      name: 'Profiles',
+      endpoint: 'http://pyroscope:4040',
+      authType: 'none',
+    });
+
+    await agent
+      .get(`/profiling-connections/${connection._id}/proxy/assets/%2e%2e/admin`)
+      .expect(405);
+
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('allows canonical static asset paths', async () => {
+    const { agent, team } = await getLoggedInAgent(server);
+    const connection = await ProfilingConnection.create({
+      team: team._id,
+      name: 'Profiles',
+      endpoint: 'http://pyroscope:4040',
+      authType: 'none',
+    });
+
+    await agent
+      .get(`/profiling-connections/${connection._id}/proxy/assets/app.js`)
+      .expect(200);
+
+    expect(mockFetch.mock.calls[0][0].toString()).toBe(
+      'http://pyroscope:4040/assets/app.js',
+    );
+  });
+
+  it.each([
+    ['application/json', '{ "query": "cpu" }'],
+    ['application/octet-stream', 'raw-profile-bytes'],
+  ])('forwards %s POST bodies byte-for-byte', async (contentType, body) => {
+    const { agent, team } = await getLoggedInAgent(server);
+    const connection = await ProfilingConnection.create({
+      team: team._id,
+      name: 'Profiles',
+      endpoint: 'http://pyroscope:4040',
+      authType: 'none',
+    });
+
+    await agent
+      .post(
+        `/profiling-connections/${connection._id}/proxy/querier.v1.QuerierService/Series`,
+      )
+      .set('content-type', contentType)
+      .send(body)
+      .expect(200);
+
+    expect(Buffer.from(mockFetch.mock.calls[0][1].body)).toEqual(
+      Buffer.from(body),
+    );
+  });
+
+  it('does not invent a body for a bodyless POST', async () => {
+    const { agent, team } = await getLoggedInAgent(server);
+    const connection = await ProfilingConnection.create({
+      team: team._id,
+      name: 'Profiles',
+      endpoint: 'http://pyroscope:4040',
+      authType: 'none',
+    });
+
+    await agent
+      .post(
+        `/profiling-connections/${connection._id}/proxy/querier.v1.QuerierService/Series`,
+      )
+      .expect(200);
+
+    expect(mockFetch.mock.calls[0][1].body).toBeUndefined();
+  });
+
+  it('rejects invalid profiling connection IDs before proxying', async () => {
+    const { agent } = await getLoggedInAgent(server);
+
+    await agent
+      .get('/profiling-connections/not-an-object-id/proxy/')
+      .expect(400);
+
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it('rejects Pyroscope ingestion paths', async () => {

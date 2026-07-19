@@ -62,6 +62,37 @@ export function buildProfilingAuthorization(
   return undefined;
 }
 
+// Reads an upstream body while enforcing a hard byte cap. Unlike buffering the
+// entire response first and checking its size afterwards, this aborts as soon as
+// the accumulated chunks exceed `maxBytes`, so a Pyroscope instance that streams
+// an oversized response without a `content-length` header cannot exhaust memory.
+// Returns null when the cap is exceeded.
+async function readBodyCapped(
+  body: ReadableStream<Uint8Array> | null,
+  maxBytes: number,
+): Promise<Buffer | null> {
+  if (!body) return Buffer.alloc(0);
+  const reader = body.getReader();
+  const chunks: Buffer[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        return null;
+      }
+      chunks.push(Buffer.from(value));
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return Buffer.concat(chunks);
+}
+
 type ProfilingTheme = 'dark' | 'light';
 
 function rewriteUiBase(
@@ -70,12 +101,16 @@ function rewriteUiBase(
   theme: ProfilingTheme,
 ) {
   const base = `/api/profiling-connections/${connectionId}/proxy/`;
+  const headOpeningTag = /<head\b[^>]*>/i;
   const withBase = /<base\s/i.test(html)
     ? html.replace(
         /<base\s+href=["'][^"']*["']\s*\/?>/i,
         `<base href="${base}" />`,
       )
-    : html.replace(/<head>/i, `<head><base href="${base}" />`);
+    : html.replace(
+        headOpeningTag,
+        openingTag => `${openingTag}<base href="${base}" />`,
+      );
   const withInitialTheme = withBase.replace(
     /<html([^>]*)>/i,
     (_match, attributes: string) => {
@@ -112,7 +147,10 @@ function rewriteUiBase(
   applyTheme();
 })();
 </script>`;
-  return withInitialTheme.replace(/<head>/i, `<head>${themeBridge}`);
+  return withInitialTheme.replace(
+    headOpeningTag,
+    openingTag => `${openingTag}${themeBridge}`,
+  );
 }
 
 export const profilingProxyHandler: RequestHandler = async (req, res, next) => {
@@ -129,7 +167,7 @@ export const profilingProxyHandler: RequestHandler = async (req, res, next) => {
       return;
     }
 
-    const path = req.path || '/';
+    const path = new URL(req.path || '/', 'http://hyperdx.local').pathname;
     if (!isAllowedRequest(req.method, path)) {
       res
         .status(405)
@@ -163,7 +201,9 @@ export const profilingProxyHandler: RequestHandler = async (req, res, next) => {
     if (authorization) headers.authorization = authorization;
 
     const body =
-      req.method === 'POST' ? JSON.stringify(req.body ?? {}) : undefined;
+      req.method === 'POST' && Buffer.isBuffer(req.body) && req.body.length > 0
+        ? new Uint8Array(req.body)
+        : undefined;
     const upstream = await fetch(upstreamUrl, {
       method: req.method,
       headers,
@@ -177,8 +217,11 @@ export const profilingProxyHandler: RequestHandler = async (req, res, next) => {
       res.status(502).json({ error: 'Pyroscope response is too large' });
       return;
     }
-    const responseBuffer = Buffer.from(await upstream.arrayBuffer());
-    if (responseBuffer.length > MAX_RESPONSE_BYTES) {
+    const responseBuffer = await readBodyCapped(
+      upstream.body,
+      MAX_RESPONSE_BYTES,
+    );
+    if (responseBuffer === null) {
       res.status(502).json({ error: 'Pyroscope response is too large' });
       return;
     }
