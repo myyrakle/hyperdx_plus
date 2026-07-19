@@ -14,6 +14,7 @@ import clickhouseProxyRouter from './routers/api/clickhouseProxy';
 import connectionsRouter from './routers/api/connections';
 import favoritesRouter from './routers/api/favorites';
 import pinnedFiltersRouter from './routers/api/pinnedFilters';
+import profilingConnectionsRouter from './routers/api/profilingConnections';
 import savedSearchRouter from './routers/api/savedSearch';
 import sourcesRouter from './routers/api/sources';
 import externalRoutersV2 from './routers/external-api/v2';
@@ -52,6 +53,10 @@ if (!config.IS_CI && config.FRONTEND_URL) {
 
 app.disable('x-powered-by');
 app.use(compression());
+app.use(
+  '/profiling-connections/:id/proxy',
+  express.raw({ type: '*/*', limit: '32mb' }),
+);
 app.use(express.json({ limit: '32mb' }));
 app.use(express.text({ limit: '32mb' }));
 app.use(express.urlencoded({ extended: false, limit: '32mb' }));
@@ -107,6 +112,11 @@ app.use('/sources', isUserAuthenticated, sourcesRouter);
 app.use('/saved-search', isUserAuthenticated, savedSearchRouter);
 app.use('/favorites', isUserAuthenticated, favoritesRouter);
 app.use('/pinned-filters', isUserAuthenticated, pinnedFiltersRouter);
+app.use(
+  '/profiling-connections',
+  isUserAuthenticated,
+  profilingConnectionsRouter,
+);
 app.use('/clickhouse-proxy', isUserAuthenticated, clickhouseProxyRouter);
 if (config.IS_PROMQL_ENABLED) {
   app.use('/v1/prometheus', isUserAuthenticated, routers.prometheusRouter);
