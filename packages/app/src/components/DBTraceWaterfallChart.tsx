@@ -8,6 +8,7 @@ import {
 } from 'react';
 import _, { omit } from 'lodash';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import SqlString from 'sqlstring';
 import TimestampNano from 'timestamp-nano';
 import { tcFromSource } from '@hyperdx/common-utils/dist/core/metadata';
@@ -593,6 +594,7 @@ export function DBTraceWaterfallChartContainer({
   /** Extra controls rendered in the waterfall controls bar (e.g. the correlated logs source selector). */
   controlsExtra?: ReactNode;
 }) {
+  const { t } = useTranslation('search');
   const formatTime = useFormatTime();
 
   const {
@@ -1170,7 +1172,7 @@ export function DBTraceWaterfallChartContainer({
                     size={12}
                     className="me-1 flex-shrink-0"
                     style={{ color: getChartColorError() }}
-                    aria-label="Error"
+                    aria-label={t('trace.error')}
                   />
                 )}
                 {isWarn && !isError && (
@@ -1178,7 +1180,7 @@ export function DBTraceWaterfallChartContainer({
                     size={12}
                     className="me-1 flex-shrink-0"
                     style={{ color: getChartColorWarning() }}
-                    aria-label="Warning"
+                    aria-label={t('trace.warning')}
                   />
                 )}
 
@@ -1187,7 +1189,7 @@ export function DBTraceWaterfallChartContainer({
                     <IconLogs
                       size={14}
                       className="align-middle me-2"
-                      aria-label="Correlated Log Line"
+                      aria-label={t('trace.correlatedLogLine')}
                     />
                   ) : null}
                   <Text
@@ -1214,7 +1216,21 @@ export function DBTraceWaterfallChartContainer({
               aliasWith,
               start,
               end,
-              tooltip: `${displayText} ${tookMs >= 0 ? `took ${tookMs.toFixed(4)}ms` : ''} ${status ? `| Status: ${status}` : ''}${!isNaN(startOffset) ? ` | Started at ${formatTime(new Date(startOffset), { format: 'withMs' })}` : ''}`,
+              tooltip: `${displayText} ${
+                tookMs >= 0
+                  ? t('trace.tooltipDuration', {
+                      duration: tookMs.toFixed(4),
+                    })
+                  : ''
+              } ${status ? `| ${t('trace.tooltipStatus', { status })}` : ''}${
+                !isNaN(startOffset)
+                  ? ` | ${t('trace.tooltipStartedAt', {
+                      time: formatTime(new Date(startOffset), {
+                        format: 'withMs',
+                      }),
+                    })}`
+                  : ''
+              }`,
               color: 'var(--color-text-inverted)',
               backgroundColor: barColor({
                 isHighlighted,
@@ -1242,6 +1258,7 @@ export function DBTraceWaterfallChartContainer({
       onClick,
       serviceColorMap,
       showSpanEvents,
+      t,
       toggleCollapse,
     ],
   );
@@ -1273,7 +1290,7 @@ export function DBTraceWaterfallChartContainer({
           <Stack gap="xs" mt="xs">
             <Box>
               <Text size="xxs" c="dimmed" mb={2}>
-                Spans filter
+                {t('trace.spansFilter')}
               </Text>
               <SearchWhereInput
                 tableConnection={tcFromSource(traceTableSource)}
@@ -1287,8 +1304,8 @@ export function DBTraceWaterfallChartContainer({
                 onLanguageChange={lang =>
                   setValue('traceWhereLanguage', lang, { shouldDirty: true })
                 }
-                lucenePlaceholder='Filter spans ex. StatusCode:"Error"'
-                sqlPlaceholder="Filter spans ex. StatusCode = 'Error'"
+                lucenePlaceholder={t('trace.spansPlaceholderLucene')}
+                sqlPlaceholder={t('trace.spansPlaceholderSql')}
                 data-testid="trace-search-input"
                 // The waterfall lives inside an `overflow: hidden` column, which
                 // clips the SQL editor's autocomplete tooltip. Portal it to the
@@ -1301,7 +1318,7 @@ export function DBTraceWaterfallChartContainer({
               {traceFilterError && (
                 <Box mt={4} data-testid="trace-filter-error">
                   <ErrorCollapse
-                    summary="Couldn't apply spans filter (showing all spans)"
+                    summary={t('trace.spansFilterError')}
                     details={traceFilterError.message}
                   />
                 </Box>
@@ -1310,7 +1327,7 @@ export function DBTraceWaterfallChartContainer({
             {logTableSource && (
               <Box>
                 <Text size="xxs" c="dimmed" mb={2}>
-                  Logs filter
+                  {t('trace.logsFilter')}
                 </Text>
                 <SearchWhereInput
                   tableConnection={tcFromSource(logTableSource)}
@@ -1324,8 +1341,8 @@ export function DBTraceWaterfallChartContainer({
                   onLanguageChange={lang =>
                     setValue('logWhereLanguage', lang, { shouldDirty: true })
                   }
-                  lucenePlaceholder='Filter logs ex. SeverityText:"error"'
-                  sqlPlaceholder="Filter logs ex. SeverityText = 'error'"
+                  lucenePlaceholder={t('trace.logsPlaceholderLucene')}
+                  sqlPlaceholder={t('trace.logsPlaceholderSql')}
                   data-testid="log-search-input"
                   parentRef={
                     typeof document !== 'undefined' ? document.body : null
@@ -1336,8 +1353,8 @@ export function DBTraceWaterfallChartContainer({
                     <ErrorCollapse
                       summary={
                         logFilterError
-                          ? "Couldn't apply logs filter (showing all logs)"
-                          : "Couldn't load correlated logs"
+                          ? t('trace.logsFilterError')
+                          : t('trace.correlatedLogsError')
                       }
                       details={logError.message}
                     />
@@ -1352,46 +1369,49 @@ export function DBTraceWaterfallChartContainer({
         <Group gap="md">
           {hasCollapsibleNodes && (
             <Group gap={2}>
-              <Tooltip label="Expand +1 level" position="bottom">
+              <Tooltip label={t('trace.expandOneLevelTitle')} position="bottom">
                 <ActionIcon
                   variant="subtle"
                   color="gray"
                   size="sm"
                   onClick={expandOneLevel}
-                  aria-label="Expand one level"
+                  aria-label={t('trace.expandOneLevel')}
                 >
                   <IconChevronDown size={14} />
                 </ActionIcon>
               </Tooltip>
-              <Tooltip label="Collapse +1 level" position="bottom">
+              <Tooltip
+                label={t('trace.collapseOneLevelTitle')}
+                position="bottom"
+              >
                 <ActionIcon
                   variant="subtle"
                   color="gray"
                   size="sm"
                   onClick={collapseOneLevel}
-                  aria-label="Collapse one level"
+                  aria-label={t('trace.collapseOneLevel')}
                 >
                   <IconChevronRight size={14} />
                 </ActionIcon>
               </Tooltip>
-              <Tooltip label="Expand all" position="bottom">
+              <Tooltip label={t('trace.expandAll')} position="bottom">
                 <ActionIcon
                   variant="subtle"
                   color="gray"
                   size="sm"
                   onClick={expandAll}
-                  aria-label="Expand all"
+                  aria-label={t('trace.expandAll')}
                 >
                   <IconChevronsDown size={14} />
                 </ActionIcon>
               </Tooltip>
-              <Tooltip label="Collapse all" position="bottom">
+              <Tooltip label={t('trace.collapseAll')} position="bottom">
                 <ActionIcon
                   variant="subtle"
                   color="gray"
                   size="sm"
                   onClick={collapseAll}
-                  aria-label="Collapse all"
+                  aria-label={t('trace.collapseAll')}
                 >
                   <IconChevronsRight size={14} />
                 </ActionIcon>
@@ -1406,7 +1426,7 @@ export function DBTraceWaterfallChartContainer({
           </Text>
           <Group gap="xs" align="center">
             <Text size="xs" c="dimmed">
-              Show:
+              {t('trace.show')}
             </Text>
             <Group gap={4}>
               <Chip
@@ -1419,7 +1439,7 @@ export function DBTraceWaterfallChartContainer({
                   label: { paddingInline: 8, height: 22, minHeight: 22 },
                 }}
               >
-                Spans
+                {t('trace.spans')}
               </Chip>
               {logTableSource && (
                 <Chip
@@ -1432,7 +1452,7 @@ export function DBTraceWaterfallChartContainer({
                     label: { paddingInline: 8, height: 22, minHeight: 22 },
                   }}
                 >
-                  Logs
+                  {t('trace.logs')}
                 </Chip>
               )}
               <Chip
@@ -1446,7 +1466,7 @@ export function DBTraceWaterfallChartContainer({
                   label: { paddingInline: 8, height: 22, minHeight: 22 },
                 }}
               >
-                Span events
+                {t('trace.spanEvents')}
               </Chip>
             </Group>
           </Group>
@@ -1459,8 +1479,10 @@ export function DBTraceWaterfallChartContainer({
               onClick={() => setIsFilterExpanded(prev => !prev)}
               size="xs"
             >
-              {isFilterExpanded ? 'Hide Filters' : 'Show Filters'}{' '}
-              {isFilterActive && '(active)'}
+              {isFilterExpanded
+                ? t('trace.hideFilters')
+                : t('trace.showFilters')}{' '}
+              {isFilterActive && t('trace.active')}
             </Anchor>
             {isFilterActive && (
               <Anchor
@@ -1469,7 +1491,7 @@ export function DBTraceWaterfallChartContainer({
                 size="xs"
                 ms="xs"
               >
-                Clear Filters
+                {t('trace.clearFilters')}
               </Anchor>
             )}
           </span>
@@ -1487,11 +1509,11 @@ export function DBTraceWaterfallChartContainer({
         }}
       >
         {isFetching ? (
-          <div className="my-3">Loading Traces...</div>
+          <div className="my-3">{t('trace.loading')}</div>
         ) : error ? (
           <Box mt="lg">
             <Text my="sm" size="sm">
-              An error occurred while fetching trace data:
+              {t('trace.fetchError')}
             </Text>
             <Code
               block
@@ -1504,15 +1526,13 @@ export function DBTraceWaterfallChartContainer({
           </Box>
         ) : rows == null ? (
           <div>
-            An unknown error occurred. <ContactSupportText />
+            {t('trace.unknownError')} <ContactSupportText />
           </div>
         ) : visibleNodes.length === 0 ? (
           flattenedNodes.length > 0 ? (
-            <div className="my-3">All items are hidden by filters</div>
+            <div className="my-3">{t('trace.hiddenByFilters')}</div>
           ) : (
-            (emptyState ?? (
-              <div className="my-3">No matching spans or logs found</div>
-            ))
+            (emptyState ?? <div className="my-3">{t('trace.noMatches')}</div>)
           )
         ) : (
           <TimelineChart

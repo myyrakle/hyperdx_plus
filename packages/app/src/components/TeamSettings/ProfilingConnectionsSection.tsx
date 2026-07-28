@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { HTTPError } from 'ky';
+import { useTranslation } from 'react-i18next';
 import type { ProfilingConnection } from '@hyperdx/common-utils/dist/types';
 import {
   Box,
@@ -41,6 +42,8 @@ function ProfilingConnectionForm({
   connection?: ProfilingConnection;
   onClose: () => void;
 }) {
+  const { t } = useTranslation('settings');
+  const { t: tCommon } = useTranslation('common');
   const [value, setValue] = useState<ProfilingConnectionInput>(
     connection
       ? {
@@ -67,31 +70,31 @@ function ProfilingConnectionForm({
   return (
     <Stack gap="sm" mt="md">
       <TextInput
-        label="Connection name"
+        label={t('profilingConnections.name')}
         value={value.name}
         onChange={event => update('name', event.currentTarget.value)}
         required
       />
       <TextInput
-        label="Pyroscope endpoint"
-        description="The HyperDX API server must be able to reach this URL."
+        label={t('profilingConnections.endpoint')}
+        description={t('profilingConnections.endpointDescription')}
         value={value.endpoint}
         onChange={event => update('endpoint', event.currentTarget.value)}
         required
       />
       <TextInput
-        label="Pyroscope tenant ID"
-        description="HyperDX sends this value as X-Scope-OrgID."
+        label={t('profilingConnections.tenantId')}
+        description={t('profilingConnections.tenantIdDescription')}
         value={value.tenantId ?? ''}
         onChange={event => update('tenantId', event.currentTarget.value)}
       />
       <Select
-        label="Upstream authentication"
+        label={t('profilingConnections.authType')}
         value={value.authType}
         data={[
-          { value: 'none', label: 'None' },
-          { value: 'basic', label: 'Basic authentication' },
-          { value: 'bearer', label: 'Bearer token' },
+          { value: 'none', label: t('profilingConnections.authNone') },
+          { value: 'basic', label: t('profilingConnections.authBasic') },
+          { value: 'bearer', label: t('profilingConnections.authBearer') },
         ]}
         onChange={next =>
           update(
@@ -102,7 +105,7 @@ function ProfilingConnectionForm({
       />
       {value.authType === 'basic' && (
         <TextInput
-          label="Username"
+          label={t('profilingConnections.username')}
           value={value.username ?? ''}
           onChange={event => update('username', event.currentTarget.value)}
           required
@@ -110,10 +113,14 @@ function ProfilingConnectionForm({
       )}
       {value.authType !== 'none' && (
         <PasswordInput
-          label={canReuseSecret ? 'Replace secret' : 'Secret'}
+          label={
+            canReuseSecret
+              ? t('profilingConnections.replaceSecret')
+              : t('profilingConnections.secret')
+          }
           description={
             canReuseSecret
-              ? 'Leave blank to keep the currently configured secret.'
+              ? t('profilingConnections.replaceSecretDescription')
               : undefined
           }
           value={value.secret ?? ''}
@@ -122,7 +129,7 @@ function ProfilingConnectionForm({
         />
       )}
       <Switch
-        label="Enabled"
+        label={t('profilingConnections.enabled')}
         checked={value.enabled}
         onChange={event => update('enabled', event.currentTarget.checked)}
       />
@@ -138,18 +145,18 @@ function ProfilingConnectionForm({
                   onError: () =>
                     notifications.show({
                       color: 'red',
-                      message: 'Failed to delete profiling connection',
+                      message: t('profilingConnections.deleteFailed'),
                     }),
                 })
               }
             >
-              Delete
+              {tCommon('actions.delete')}
             </Button>
           )}
         </div>
         <Group gap="xs">
           <Button variant="secondary" onClick={onClose}>
-            Cancel
+            {tCommon('actions.cancel')}
           </Button>
           <Button
             variant="secondary"
@@ -163,10 +170,10 @@ function ProfilingConnectionForm({
                 });
                 notifications.show({
                   color: 'green',
-                  message: 'Successfully connected to Pyroscope',
+                  message: t('profilingConnections.testSuccess'),
                 });
               } catch (error) {
-                let message = 'Unable to connect to Pyroscope';
+                let message: string = t('profilingConnections.testFailure');
                 if (error instanceof HTTPError) {
                   try {
                     const body: { error?: string } =
@@ -183,7 +190,7 @@ function ProfilingConnectionForm({
               }
             }}
           >
-            Test Connection
+            {t('profilingConnections.test')}
           </Button>
           <Button
             variant="primary"
@@ -196,20 +203,20 @@ function ProfilingConnectionForm({
                   onSuccess: () => {
                     notifications.show({
                       color: 'green',
-                      message: 'Profiling connection saved',
+                      message: t('profilingConnections.saved'),
                     });
                     onClose();
                   },
                   onError: () =>
                     notifications.show({
                       color: 'red',
-                      message: 'Failed to save profiling connection',
+                      message: t('profilingConnections.saveFailed'),
                     }),
                 },
               )
             }
           >
-            Save
+            {tCommon('actions.save')}
           </Button>
         </Group>
       </Group>
@@ -218,12 +225,14 @@ function ProfilingConnectionForm({
 }
 
 export default function ProfilingConnectionsSection() {
+  const { t } = useTranslation('settings');
+  const { t: tCommon } = useTranslation('common');
   const { data: connections } = useProfilingConnections();
   const [editingId, setEditingId] = useState<string | null>(null);
 
   return (
     <Box id="profiling-connections">
-      <Text size="md">Profiling Connections</Text>
+      <Text size="md">{t('sections.profilingConnections')}</Text>
       <Divider my="md" />
       <Card>
         <Stack gap="md">
@@ -236,15 +245,19 @@ export default function ProfilingConnectionsSection() {
                     {connection.endpoint}
                   </Text>
                   <Text size="xs" c="dimmed">
-                    Tenant: {connection.tenantId || 'anonymous'} ·{' '}
-                    {connection.authType}
+                    {t('profilingConnections.tenant', {
+                      tenantId:
+                        connection.tenantId ||
+                        t('profilingConnections.anonymousTenant'),
+                      authType: connection.authType,
+                    })}
                   </Text>
                 </div>
                 <Button
                   variant="subtle"
                   onClick={() => setEditingId(connection.id)}
                 >
-                  Edit
+                  {tCommon('actions.edit')}
                 </Button>
               </Group>
               {editingId === connection.id && (
@@ -264,7 +277,7 @@ export default function ProfilingConnectionsSection() {
               onClick={() => setEditingId('new')}
               w="fit-content"
             >
-              Add Profiling Connection
+              {t('profilingConnections.add')}
             </Button>
           )}
         </Stack>

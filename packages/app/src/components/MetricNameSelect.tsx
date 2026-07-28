@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { addDays, differenceInDays, subDays } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import {
   DateRange,
   MetricsDataType,
@@ -166,6 +167,7 @@ export function MetricNameSelect({
   onFocus?: () => void;
   'data-testid'?: string;
 }) {
+  const { t } = useTranslation('charts');
   const { gaugeMetrics, histogramMetrics, sumMetrics } =
     useMetricNames(metricSource);
 
@@ -188,10 +190,10 @@ export function MetricNameSelect({
       variant="filled"
       placeholder={
         isLoading
-          ? 'Loading...'
+          ? t('metrics.loading')
           : isError
-            ? 'Unable to load metrics'
-            : 'Select a metric...'
+            ? t('metrics.loadError')
+            : t('metrics.selectMetric')
       }
       data={options}
       limit={100}

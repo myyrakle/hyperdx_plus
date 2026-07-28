@@ -15,7 +15,7 @@ export interface IProfilingConnection {
   enabled: boolean;
 }
 
-export type ProfilingConnectionDocument =
+type ProfilingConnectionDocument =
   mongoose.HydratedDocument<IProfilingConnection>;
 
 const ProfilingConnectionSchema = new Schema<IProfilingConnection>(

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Group,
@@ -20,6 +21,7 @@ import { useProfilingConnections } from '@/profilingConnection';
 import { useBrandDisplayName } from '@/theme/ThemeProvider';
 
 function ContinuousProfilingPage() {
+  const { t } = useTranslation('profiling');
   const brandName = useBrandDisplayName();
   const router = useRouter();
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -48,11 +50,11 @@ function ContinuousProfilingPage() {
   return (
     <Stack gap={0} h="100%">
       <Head>
-        <title>Continuous Profiling - {brandName}</title>
+        <title>{t('page.browserTitle', { brandName })}</title>
       </Head>
       <PageHeader>
         <Group justify="space-between" w="100%">
-          <Text>Continuous Profiling</Text>
+          <Text>{t('page.title')}</Text>
           {enabledConnections.length > 1 && (
             <Select
               size="xs"
@@ -80,12 +82,12 @@ function ContinuousProfilingPage() {
         <Box p="xl">
           <EmptyState
             icon={<IconFlame size={32} />}
-            title="No profiling connection configured"
-            description="Connect a Pyroscope repository to query continuous profiles with your HyperDX session."
+            title={t('page.emptyTitle')}
+            description={t('page.emptyDescription')}
             variant="card"
           >
             <Text component={Link} href="/team?tab=data#profiling-connections">
-              Configure profiling connection
+              {t('page.configureConnection')}
             </Text>
           </EmptyState>
         </Box>
@@ -93,7 +95,7 @@ function ContinuousProfilingPage() {
         <iframe
           ref={iframeRef}
           key={selected.id}
-          title={`Pyroscope - ${selected.name}`}
+          title={t('page.frameTitle', { name: selected.name })}
           src={`/api/profiling-connections/${selected.id}/proxy/?hdx_theme=${profilingTheme}`}
           onLoad={syncProfilingTheme}
           referrerPolicy="no-referrer"

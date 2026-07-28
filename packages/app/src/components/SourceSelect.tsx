@@ -1,5 +1,6 @@
 import { memo, useCallback, useMemo } from 'react';
 import { UseControllerProps, useWatch } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { SourceKind } from '@hyperdx/common-utils/dist/types';
 import {
   ActionIcon,
@@ -72,6 +73,7 @@ export const SourceManagementMenu = ({
   onManageSources,
   onCreate,
 }: SourceManagementMenuProps) => {
+  const { t } = useTranslation('sources');
   const items: React.ReactNode[] = [];
 
   if (onSchemaPreview) {
@@ -82,7 +84,7 @@ export const SourceManagementMenu = ({
         onClick={onSchemaPreview}
         disabled={!hasSelection || !isSchemaPreviewEnabled}
       >
-        View schema
+        {t('select.viewSchema')}
       </Menu.Item>,
     );
   }
@@ -95,7 +97,7 @@ export const SourceManagementMenu = ({
         onClick={onEdit}
         disabled={!hasSelection}
       >
-        Edit source
+        {t('select.edit')}
       </Menu.Item>,
     );
   }
@@ -107,7 +109,7 @@ export const SourceManagementMenu = ({
         leftSection={<IconSettings size={14} />}
         onClick={onManageSources}
       >
-        Manage sources
+        {t('select.manage')}
       </Menu.Item>,
     );
   }
@@ -122,7 +124,7 @@ export const SourceManagementMenu = ({
         leftSection={<IconPlus size={14} />}
         onClick={onCreate}
       >
-        Create new source
+        {t('select.create')}
       </Menu.Item>,
     );
   }
@@ -132,14 +134,14 @@ export const SourceManagementMenu = ({
   return (
     <Menu width={220} withinPortal position="bottom-end">
       <Menu.Target>
-        <Tooltip label="Source actions" position="top" withArrow>
+        <Tooltip label={t('select.actions')} position="top" withArrow>
           <ActionIcon
             variant="subtle"
             color="gray"
             size={`input-${size}`}
             className={styles.sourceMenuButton}
             data-testid="source-actions-menu"
-            aria-label="Source actions"
+            aria-label={t('select.actions')}
           >
             <IconDotsVertical size={14} />
           </ActionIcon>
@@ -172,6 +174,7 @@ function SourceSelectControlledComponent({
   connectionId?: string;
 } & UseControllerProps<any> &
   SelectProps) {
+  const { t } = useTranslation('sources');
   const { data } = useSources();
   const selectedSourceId = useWatch({
     control: props.control,
@@ -238,7 +241,7 @@ function SourceSelectControlledComponent({
         renderOption={renderOption}
         filter={sourceSelectFilter}
         searchable
-        placeholder="Data Source"
+        placeholder={t('select.placeholder')}
         leftSection={leftIcon}
         maxDropdownHeight={280}
         size={size}

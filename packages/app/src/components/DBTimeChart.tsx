@@ -1,6 +1,7 @@
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { add, differenceInSeconds } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import {
   convertGranularityToSeconds,
   getAlignedDateRange,
@@ -122,6 +123,7 @@ function FilterByGroupRow({
   onDrillIn: () => void;
   onFocus: () => void;
 }) {
+  const { t } = useTranslation('charts');
   const clipboard = useClipboard({ timeout: 1500 });
 
   return (
@@ -141,7 +143,7 @@ function FilterByGroupRow({
           make the buttons move out from under the cursor mid-click. */}
       <Group gap={2} wrap="nowrap" style={{ flexShrink: 0 }}>
         <Tooltip
-          label="Search (Opens in New Tab)"
+          label={t('timeChart.searchNewTab')}
           withArrow
           withinPortal
           color="gray"
@@ -156,14 +158,16 @@ function FilterByGroupRow({
             variant="subtle"
             size="xs"
             data-testid={`chart-view-events-link-${dataKey}`}
-            aria-label="Search (Opens in New Tab)"
+            aria-label={t('timeChart.searchNewTab')}
             onClick={onDrillIn}
           >
             <IconSearch size={13} />
           </ActionIcon>
         </Tooltip>
         <Tooltip
-          label={clipboard.copied ? 'Copied!' : 'Copy Label'}
+          label={
+            clipboard.copied ? t('common.copied') : t('timeChart.copyLabel')
+          }
           withArrow
           withinPortal
           color="gray"
@@ -172,7 +176,7 @@ function FilterByGroupRow({
           <ActionIcon
             variant="subtle"
             size="xs"
-            aria-label="Copy Label"
+            aria-label={t('timeChart.copyLabel')}
             data-testid={`chart-copy-name-${dataKey}`}
             onClick={() => clipboard.copy(name)}
           >
@@ -184,7 +188,7 @@ function FilterByGroupRow({
           </ActionIcon>
         </Tooltip>
         <Tooltip
-          label="Focus"
+          label={t('timeChart.focus')}
           withArrow
           withinPortal
           color="gray"
@@ -193,7 +197,7 @@ function FilterByGroupRow({
           <ActionIcon
             variant="subtle"
             size="xs"
-            aria-label="Focus"
+            aria-label={t('timeChart.focus')}
             data-testid={`chart-focus-series-${dataKey}`}
             onClick={onFocus}
           >
@@ -217,6 +221,7 @@ function ActiveTimeTooltip({
   /** Focus a series by its raw series key (dataKey) and display name. */
   onFocusSeries: (payload: { dataKey?: string; name: string }) => void;
 }) {
+  const { t } = useTranslation('charts');
   const isOpen =
     activeClickPayload != null &&
     activeClickPayload.activePayload != null &&
@@ -307,14 +312,14 @@ function ActiveTimeTooltip({
             >
               <Group gap={8} py={2}>
                 <IconSearch size={14} />
-                <Text size="xs">View All Events</Text>
+                <Text size="xs">{t('timeChart.viewAllEvents')}</Text>
               </Group>
             </Link>
             {validPayloads.length > 1 && (
               <>
                 <Divider my={4} />
                 <Text c="gray.5" size="xs">
-                  Filter by group:
+                  {t('timeChart.filterByGroup')}
                 </Text>
                 {validPayloads.map((payload, idx) => {
                   const seriesUrl = buildSearchUrl(
@@ -406,6 +411,7 @@ function DBTimeChartComponent({
   errorVariant,
   onFocusSeries,
 }: DBTimeChartComponentProps) {
+  const { t } = useTranslation('charts');
   const [selectedSeriesSet, setSelectedSeriesSet] = useState<Set<string>>(
     new Set(),
   );
@@ -823,14 +829,14 @@ function DBTimeChartComponent({
           options={[
             {
               value: DisplayType.Line,
-              label: 'Display as Line Chart',
+              label: t('timeChart.displayAsLine'),
               icon: <IconChartLine />,
             },
             {
               value: DisplayType.StackedBar,
               label: config.compareToPreviousPeriod
-                ? 'Bar Chart Unavailable When Comparing to Previous Period'
-                : 'Display as Bar Chart',
+                ? t('timeChart.barChartUnavailable')
+                : t('timeChart.displayAsBar'),
               icon: <IconChartBar />,
               disabled: config.compareToPreviousPeriod,
             },
@@ -857,13 +863,14 @@ function DBTimeChartComponent({
     showDateRangeIndicator,
     mvOptimizationData,
     queriedConfig,
+    t,
   ]);
 
   return (
     <ChartContainer title={title} toolbarItems={toolbarItemsMemo}>
       {isLoading && !data ? (
         <div className="d-flex h-100 w-100 align-items-center justify-content-center text-muted">
-          Loading Chart Data...
+          {t('common.loadingData')}
         </div>
       ) : isError ? (
         <ChartErrorState error={error} variant={errorVariant} />
@@ -878,7 +885,7 @@ function DBTimeChartComponent({
         />
       ) : graphResults.length === 0 ? (
         <div className="d-flex h-100 w-100 align-items-center justify-content-center text-muted">
-          No data found within time range.
+          {t('common.noData')}
         </div>
       ) : (
         <>

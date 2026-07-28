@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import cx from 'classnames';
+import { useTranslation } from 'react-i18next';
 import { Tooltip, UnstyledButton } from '@mantine/core';
 import {
   IconArrowUpRight,
@@ -81,6 +82,7 @@ export const Table = ({
   onSortingChange: (sorting: SortingState) => void;
   variant?: TableVariant;
 }) => {
+  const { t } = useTranslation('charts');
   const brandName = useBrandDisplayName();
   const MIN_COLUMN_WIDTH_PX = 100;
   //we need a reference to the scrolling element for logic down below
@@ -382,7 +384,7 @@ export const Table = ({
                               data={csvData}
                               filename={`${brandName}_table_results`}
                               className="fs-8 ms-2"
-                              title="Download table as CSV"
+                              title={t('tableChart.downloadCsv')}
                             >
                               <IconDownload size={14} />
                             </CsvExportButton>
@@ -512,7 +514,7 @@ export const Table = ({
       </table>
       {isTruncated && (
         <div className="p-2 text-center">
-          Showing the first {MAX_TABLE_ROWS} rows.
+          {t('tableChart.showingFirst', { count: MAX_TABLE_ROWS })}
         </div>
       )}
       {tableBottom}

@@ -1,6 +1,7 @@
 import { useCallback, useContext, useMemo } from 'react';
 import isString from 'lodash/isString';
 import pickBy from 'lodash/pickBy';
+import { useTranslation } from 'react-i18next';
 import { SourceKind, TSource } from '@hyperdx/common-utils/dist/types';
 import { Accordion, Box, Flex, Text } from '@mantine/core';
 
@@ -35,6 +36,7 @@ export function RowOverviewPanel({
   hideHeader?: boolean;
   'data-testid'?: string;
 }) {
+  const { t } = useTranslation('search');
   const { data } = useRowData({ source, rowId, aliasWith });
   const { onPropertyAddClick, generateSearchUrl } =
     useContext(RowSidePanelContext);
@@ -225,7 +227,7 @@ export function RowOverviewPanel({
           <Accordion.Item value="network">
             <Accordion.Control>
               <Text size="sm" ps="md">
-                HTTP Request
+                {t('overview.httpRequest')}
               </Text>
             </Accordion.Control>
             <Accordion.Panel>
@@ -242,7 +244,7 @@ export function RowOverviewPanel({
           <Accordion.Item value="exception">
             <Accordion.Control>
               <Text size="sm" ps="md">
-                Exception
+                {t('overview.exception')}
               </Text>
             </Accordion.Control>
             <Accordion.Panel>
@@ -263,7 +265,7 @@ export function RowOverviewPanel({
           <Accordion.Item value="spanEvents">
             <Accordion.Control>
               <Text size="sm" ps="md">
-                Span Events
+                {t('overview.spanEvents')}
               </Text>
             </Accordion.Control>
             <Accordion.Panel>
@@ -278,7 +280,7 @@ export function RowOverviewPanel({
           <Accordion.Item value="topLevelAttributes">
             <Accordion.Control>
               <Text size="sm" ps="md">
-                Top Level Attributes
+                {t('overview.topLevelAttributes')}
               </Text>
             </Accordion.Control>
             <Accordion.Panel>
@@ -297,7 +299,9 @@ export function RowOverviewPanel({
           <Accordion.Item value="eventAttributes">
             <Accordion.Control>
               <Text size="sm" ps="md">
-                {source.kind === 'log' ? 'Log' : 'Span'} Attributes
+                {source.kind === 'log'
+                  ? t('overview.logAttributes')
+                  : t('overview.spanAttributes')}
               </Text>
             </Accordion.Control>
             <Accordion.Panel>
@@ -316,7 +320,7 @@ export function RowOverviewPanel({
           <Accordion.Item value="resourceAttributes">
             <Accordion.Control>
               <Text size="sm" ps="md">
-                Resource Attributes
+                {t('overview.resourceAttributes')}
               </Text>
             </Accordion.Control>
             <Accordion.Panel>
