@@ -23,6 +23,7 @@ import {
   useQueryStates,
 } from 'nuqs';
 import { useForm, useWatch } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import HyperDX from '@hyperdx/browser';
@@ -166,13 +167,6 @@ import { FormatTime } from './useFormatTime';
 
 import searchPageStyles from '@styles/SearchPage.module.scss';
 
-const LIVE_TAIL_REFRESH_FREQUENCY_OPTIONS = [
-  { value: '1000', label: '1s' },
-  { value: '2000', label: '2s' },
-  { value: '4000', label: '4s' },
-  { value: '10000', label: '10s' },
-  { value: '30000', label: '30s' },
-];
 const DEFAULT_REFRESH_FREQUENCY = 10000;
 
 const ALLOWED_SOURCE_KINDS = [SourceKind.Log, SourceKind.Trace];
@@ -231,8 +225,14 @@ function SourceEditModal({
   onClose: () => void;
   inputSource: string | undefined;
 }) {
+  const { t } = useTranslation('search');
   return (
-    <Modal size="xl" opened={opened} onClose={onClose} title="Edit Source">
+    <Modal
+      size="xl"
+      opened={opened}
+      onClose={onClose}
+      title={t('page.editSource')}
+    >
       <TableSourceForm sourceId={inputSource} />
     </Modal>
   );
@@ -247,14 +247,19 @@ function NewSourceModal({
   onClose: () => void;
   onCreate: (source: TSource) => void;
 }) {
+  const { t } = useTranslation('search');
   return (
     <Modal
       size="xl"
       opened={opened}
       onClose={onClose}
-      title="Configure New Source"
+      title={t('page.configureSource')}
     >
-      <TableSourceForm isNew defaultName="My New Source" onCreate={onCreate} />
+      <TableSourceForm
+        isNew
+        defaultName={t('page.newSourceName')}
+        onCreate={onCreate}
+      />
     </Modal>
   );
 }
@@ -264,6 +269,7 @@ function ResumeLiveTailButton({
 }: {
   handleResumeLiveTail: () => void;
 }) {
+  const { t } = useTranslation('search');
   const { themeName } = useAppTheme();
   const variant = themeName === 'clickstack' ? 'secondary' : 'primary';
 
@@ -274,7 +280,7 @@ function ResumeLiveTailButton({
       onClick={handleResumeLiveTail}
       leftSection={<IconBolt size={14} />}
     >
-      Resume Live Tail
+      {t('page.resumeLiveTail')}
     </Button>
   );
 }
@@ -284,6 +290,7 @@ function SearchSubmitButton({
 }: {
   isFormStateDirty: boolean;
 }) {
+  const { t } = useTranslation('search');
   return (
     <Button
       data-testid="search-submit-button"
@@ -293,19 +300,20 @@ function SearchSubmitButton({
       style={{ flexShrink: 0 }}
       size="xs"
     >
-      Run
+      {t('page.run')}
     </Button>
   );
 }
 
 function ExpandFiltersButton({ onExpand }: { onExpand: () => void }) {
+  const { t } = useTranslation('search');
   return (
-    <Tooltip label="Show filters" position="bottom">
+    <Tooltip label={t('page.showFilters')} position="bottom">
       <ActionIcon
         variant="subtle"
         size="xs"
         onClick={onExpand}
-        aria-label="Show filters"
+        aria-label={t('page.showFilters')}
       >
         <IconArrowBarToRight size={14} />
       </ActionIcon>
@@ -353,6 +361,7 @@ export function SearchNumRows({
   isSearching: boolean;
   isLiveTail?: boolean;
 }) {
+  const { t } = useTranslation('search');
   const [statsOpened, { open: openStats, close: closeStats }] =
     useDisclosure(false);
   const { data, isLoading, error } = useExplainQuery(config, {
@@ -381,7 +390,11 @@ export function SearchNumRows({
       <Modal
         opened={statsOpened}
         onClose={closeStats}
-        title={sqlConfig != null ? 'Generated SQL (Timeline)' : 'Generated SQL'}
+        title={
+          sqlConfig != null
+            ? t('page.generatedSqlTimeline')
+            : t('page.generatedSql')
+        }
         size="xl"
       >
         <ChartSQLPreview config={sqlConfig ?? config} enableCopy />
@@ -389,10 +402,12 @@ export function SearchNumRows({
       <Group gap={4} align="center">
         <Text size="xs">
           {isLoading
-            ? 'Scanned Rows ...'
+            ? t('page.scannedRowsLoading')
             : error || numRows == null
               ? ''
-              : `Scanned Rows: ${Number(numRows).toLocaleString()}`}
+              : t('page.scannedRows', {
+                  displayCount: Number(numRows).toLocaleString(),
+                })}
         </Text>
         {showElapsed && (
           <>
@@ -403,8 +418,10 @@ export function SearchNumRows({
             )}
             <Text size="xs">
               {showElapsedLoading
-                ? 'Elapsed Time: ...'
-                : `Elapsed Time: ${formatDurationMs(searchElapsedMs!)}`}
+                ? t('page.elapsedLoading')
+                : t('page.elapsed', {
+                    duration: formatDurationMs(searchElapsedMs!),
+                  })}
             </Text>
           </>
         )}
@@ -412,13 +429,13 @@ export function SearchNumRows({
             explain query, so it renders unconditionally. Gating it on explain
             loading/data would make it flicker on every live-tail poll, since
             each poll changes the dateRange (and thus the explain queryKey). */}
-        <Tooltip label="Show Generated SQL" position="top">
+        <Tooltip label={t('page.showGeneratedSql')} position="top">
           <ActionIcon
             variant="subtle"
             size="sm"
             color="gray"
             onClick={openStats}
-            aria-label="Show Generated SQL"
+            aria-label={t('page.showGeneratedSql')}
           >
             <IconCode size={16} />
           </ActionIcon>
@@ -441,6 +458,7 @@ function SaveSearchModalComponent({
   isUpdate: boolean;
   savedSearchId: string | undefined | null;
 }) {
+  const { t } = useTranslation('search');
   const { data: savedSearch } = useSavedSearch(
     { id: savedSearchId ?? '' },
     {
@@ -522,9 +540,8 @@ function SaveSearchModalComponent({
               console.error('Error updating saved search:', error);
               notifications.show({
                 color: 'red',
-                title: 'Error',
-                message:
-                  'An error occurred while updating your saved search. Please try again.',
+                title: t('page.error'),
+                message: t('page.updateSavedSearchError'),
               });
             },
           },
@@ -549,9 +566,8 @@ function SaveSearchModalComponent({
           console.error('Error creating saved search:', error);
           notifications.show({
             color: 'red',
-            title: 'Error',
-            message:
-              'An error occurred while saving your search. Please try again.',
+            title: t('page.error'),
+            message: t('page.saveSearchError'),
           });
         }
       }
@@ -567,7 +583,7 @@ function SaveSearchModalComponent({
       data-testid="save-search-modal"
       opened={opened}
       onClose={closeAndReset}
-      title="Save Search"
+      title={t('page.saveSearch')}
       centered
       size="lg"
     >
@@ -592,7 +608,7 @@ function SaveSearchModalComponent({
                 <Text size="xs">{chartConfig.where}</Text>
               ) : (
                 <Text size="xxs" fs="italic">
-                  None
+                  {t('page.none')}
                 </Text>
               )}
               <Text size="xs" mb="xs" mt="sm">
@@ -617,11 +633,11 @@ function SaveSearchModalComponent({
               )}
             </Card>
           ) : (
-            <Text>Loading Chart Config...</Text>
+            <Text>{t('page.loadingChartConfig')}</Text>
           )}
           <Box>
             <Text size="xs" mb="xs">
-              Name
+              {t('page.name')}
             </Text>
             <InputControlled
               data-testid="save-search-name-input"
@@ -632,7 +648,7 @@ function SaveSearchModalComponent({
           </Box>
           <Box mb="sm">
             <Text size="xs" mb="xs">
-              Tags
+              {t('page.tags')}
             </Text>
             <Group gap="xs" align="center" mb="xs">
               {tags.map(tag => (
@@ -664,7 +680,7 @@ function SaveSearchModalComponent({
                   size="xs"
                 >
                   <IconPlus size={14} className="me-1" />
-                  Add Tag
+                  {t('page.addTag')}
                 </Button>
               </Tags>
             </Group>
@@ -676,7 +692,7 @@ function SaveSearchModalComponent({
             disabled={!formState.isValid}
             loading={isPending}
           >
-            {isUpdate ? 'Update' : 'Save'}
+            {isUpdate ? t('page.update') : t('page.save')}
           </Button>
         </Stack>
       </form>
@@ -955,6 +971,17 @@ export function useSearchTelemetry({
 }
 
 export function DBSearchPage() {
+  const { t } = useTranslation('search');
+  const liveTailRefreshFrequencyOptions = useMemo(
+    () => [
+      { value: '1000', label: t('page.refresh1s') },
+      { value: '2000', label: t('page.refresh2s') },
+      { value: '4000', label: t('page.refresh4s') },
+      { value: '10000', label: t('page.refresh10s') },
+      { value: '30000', label: t('page.refresh30s') },
+    ],
+    [t],
+  );
   const brandName = useBrandDisplayName();
   // Next router is laggy behind window.location, which causes race
   // conditions with useQueryStates, so we'll parse it directly
@@ -1456,7 +1483,7 @@ export function DBSearchPage() {
             onSuccess: () => {
               notifications.show({
                 color: 'green',
-                message: 'Tags updated successfully',
+                message: t('page.tagsUpdated'),
               });
             },
             onError: () => {
@@ -1464,7 +1491,7 @@ export function DBSearchPage() {
                 color: 'red',
                 message: (
                   <>
-                    An error occurred. <ContactSupportText />
+                    {t('page.genericError')} <ContactSupportText />
                   </>
                 ),
               });
@@ -1473,7 +1500,7 @@ export function DBSearchPage() {
         );
       }
     },
-    [savedSearch, searchedConfig, updateSavedSearch],
+    [savedSearch, searchedConfig, updateSavedSearch, t],
   );
 
   const [newSourceModalOpened, setNewSourceModalOpened] = useState(false);
@@ -2008,7 +2035,12 @@ export function DBSearchPage() {
     >
       <Head>
         <title>
-          {savedSearch ? `${savedSearch.name} Search` : 'Search'} - {brandName}
+          {savedSearch
+            ? t('page.savedBrowserTitle', {
+                name: savedSearch.name,
+                brandName,
+              })
+            : t('page.browserTitle', { brandName })}
         </title>
       </Head>
       {!IS_LOCAL_MODE && isAlertModalOpen && (
@@ -2025,7 +2057,7 @@ export function DBSearchPage() {
           <Group justify="space-between">
             <Breadcrumbs fz="sm">
               <Anchor component={Link} href="/search/list" fz="sm" c="dimmed">
-                Saved Searches
+                {t('page.savedSearches')}
               </Anchor>
               <Text fz="sm" c="dimmed" maw={400} truncate="end">
                 {savedSearch.name}
@@ -2034,7 +2066,7 @@ export function DBSearchPage() {
             <Text size="xs" c="dimmed" lh={1}>
               {savedSearch.createdBy && (
                 <span>
-                  Created by{' '}
+                  {t('page.createdBy')}{' '}
                   {savedSearch.createdBy.name || savedSearch.createdBy.email}.{' '}
                 </span>
               )}
@@ -2047,12 +2079,22 @@ export function DBSearchPage() {
                         format="short"
                       />
                       {savedSearch.updatedBy
-                        ? ` by ${savedSearch.updatedBy.name || savedSearch.updatedBy.email}`
+                        ? ` ${t('page.by')} ${
+                            savedSearch.updatedBy.name ||
+                            savedSearch.updatedBy.email
+                          }`
                         : ''}
                     </>
                   }
                 >
-                  <span>{`Updated ${formatDistanceToNow(new Date(savedSearch.updatedAt), { addSuffix: true })}.`}</span>
+                  <span>
+                    {t('page.updated', {
+                      time: formatDistanceToNow(
+                        new Date(savedSearch.updatedAt),
+                        { addSuffix: true },
+                      ),
+                    })}
+                  </span>
                 </Tooltip>
               )}
             </Text>
@@ -2061,7 +2103,7 @@ export function DBSearchPage() {
             <div data-testid="saved-search-name">
               <EditablePageName
                 key={savedSearch.id}
-                name={savedSearch?.name ?? 'Untitled Search'}
+                name={savedSearch?.name ?? t('page.untitled')}
                 onSave={editedName => {
                   updateSavedSearch.mutate({
                     id: savedSearch.id,
@@ -2174,7 +2216,7 @@ export function DBSearchPage() {
                 onClick={onSaveSearch}
                 style={{ flexShrink: 0 }}
               >
-                Save
+                {t('page.save')}
               </Button>
             ) : (
               <Button
@@ -2186,7 +2228,7 @@ export function DBSearchPage() {
                 }}
                 style={{ flexShrink: 0 }}
               >
-                Update
+                {t('page.update')}
               </Button>
             )}
             {!IS_LOCAL_MODE && (
@@ -2198,7 +2240,7 @@ export function DBSearchPage() {
                 style={{ flexShrink: 0 }}
               >
                 <Group gap={4}>
-                  Alerts
+                  {t('page.alerts')}
                   <AlertStatusIcon alerts={savedSearch?.alerts} />
                 </Group>
               </Button>
@@ -2251,12 +2293,12 @@ export function DBSearchPage() {
               size="xs"
             />
             {isLive && (
-              <Tooltip label="Live tail refresh interval">
+              <Tooltip label={t('page.liveRefreshInterval')}>
                 <Box style={{ width: 80, minWidth: 80, flexShrink: 0 }}>
                   <Select
                     size="xs"
                     w="100%"
-                    data={LIVE_TAIL_REFRESH_FREQUENCY_OPTIONS}
+                    data={liveTailRefreshFrequencyOptions}
                     value={String(refreshFrequency)}
                     onChange={value =>
                       setRefreshFrequency(value ? parseInt(value, 10) : null)
@@ -2307,8 +2349,8 @@ export function DBSearchPage() {
           <EmptyState
             h="100%"
             icon={<IconStack2 size={32} />}
-            title="No data to display"
-            description="Select a source and click the play button to query data."
+            title={t('page.noData')}
+            description={t('page.noDataDescription')}
           />
         ) : (
           <>
@@ -2498,7 +2540,7 @@ export function DBSearchPage() {
                         {whereSuggestions && whereSuggestions.length > 0 && (
                           <Box mb="xl">
                             <Text size="lg">
-                              <b>Query Helper</b>
+                              <b>{t('page.queryHelper')}</b>
                             </Text>
                             <Grid>
                               {whereSuggestions!.map(s => (
@@ -2512,7 +2554,7 @@ export function DBSearchPage() {
                                         setValue('where', s.corrected())
                                       }
                                     >
-                                      Accept
+                                      {t('page.accept')}
                                     </Button>
                                   </Grid.Col>
                                 </Fragment>
@@ -2522,7 +2564,7 @@ export function DBSearchPage() {
                         )}
                         <Box mt="sm">
                           <Text my="sm" size="sm">
-                            Error encountered for query with inputs:
+                            {t('page.queryErrorInputs')}
                           </Text>
                           <Paper
                             flex="auto"
@@ -2553,7 +2595,7 @@ export function DBSearchPage() {
                               <Grid.Col span={2}>
                                 <Text>
                                   {chartConfig.whereLanguage === 'lucene'
-                                    ? 'Searched For'
+                                    ? t('page.searchedFor')
                                     : 'WHERE'}
                                 </Text>
                               </Grid.Col>
@@ -2580,7 +2622,7 @@ export function DBSearchPage() {
                         </Box>
                         <Box mt="lg">
                           <Text my="sm" size="sm">
-                            Error Message:
+                            {t('page.errorMessage')}
                           </Text>
                           <Code
                             block
@@ -2594,7 +2636,7 @@ export function DBSearchPage() {
                         {queryError instanceof ClickHouseQueryError && (
                           <Box mt="lg">
                             <Text my="sm" size="sm">
-                              Original Query:
+                              {t('page.originalQuery')}
                             </Text>
                             <Code
                               block

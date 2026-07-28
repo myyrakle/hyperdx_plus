@@ -12,6 +12,7 @@ import { isString } from 'lodash';
 import curry from 'lodash/curry';
 import ms from 'ms';
 import { useHotkeys } from 'react-hotkeys-hook';
+import { useTranslation } from 'react-i18next';
 import {
   Bar,
   BarChart,
@@ -305,6 +306,7 @@ const SqlModal = ({
   onClose: () => void;
   config: BuilderChartConfigWithDateRange;
 }) => {
+  const { t } = useTranslation('search');
   const { data: sql, isLoading: isLoadingSql } = useRenderedSqlChartConfig(
     config,
     {
@@ -315,7 +317,12 @@ const SqlModal = ({
   );
 
   return (
-    <Modal opened={opened} onClose={onClose} title="Generated SQL" size="auto">
+    <Modal
+      opened={opened}
+      onClose={onClose}
+      title={t('table.generatedSql')}
+      size="auto"
+    >
       {sql ? (
         <SQLPreview data={sql} enableCopy={true} />
       ) : isLoadingSql ? (
@@ -323,10 +330,10 @@ const SqlModal = ({
           <div className="d-inline-block me-2">
             <IconRefresh size={14} className="spin-animate" />
           </div>
-          Loading SQL...
+          {t('table.loadingSql')}
         </div>
       ) : (
-        <div className="text-center my-2">No SQL available</div>
+        <div className="text-center my-2">{t('table.noSql')}</div>
       )}
     </Modal>
   );
@@ -409,6 +416,7 @@ export const RawLogTable = memo(
     variant?: DBRowTableVariant;
     onRemoveColumn?: (column: string) => void;
   }) => {
+    const { t } = useTranslation('search');
     const dedupedRows = useMemo(() => {
       const lIds = new Set();
       const returnedRows = dedupRows
@@ -1025,10 +1033,12 @@ export const RawLogTable = memo(
                                   Object.keys(columnSizeStorage).length > 0 && (
                                     <UnstyledButton
                                       onClick={() => setColumnSizeStorage({})}
-                                      title="Reset Column Widths"
+                                      title={t('table.resetColumnWidths')}
                                       display="flex"
                                     >
-                                      <MantineTooltip label="Reset Column Widths">
+                                      <MantineTooltip
+                                        label={t('table.resetColumnWidths')}
+                                      >
                                         <IconRotateClockwise size={16} />
                                       </MantineTooltip>
                                     </UnstyledButton>
@@ -1036,11 +1046,13 @@ export const RawLogTable = memo(
                                 {config && (
                                   <UnstyledButton
                                     onClick={() => handleSqlModalOpen(true)}
-                                    title="Show Generated SQL"
+                                    title={t('table.showGeneratedSql')}
                                     tabIndex={0}
                                     display="flex"
                                   >
-                                    <MantineTooltip label="Show Generated SQL">
+                                    <MantineTooltip
+                                      label={t('table.showGeneratedSql')}
+                                    >
                                       <IconCode size={16} />
                                     </MantineTooltip>
                                   </UnstyledButton>
@@ -1049,11 +1061,19 @@ export const RawLogTable = memo(
                                   onClick={() =>
                                     setWrapLinesEnabled(prev => !prev)
                                   }
-                                  title={`${wrapLinesEnabled ? 'Disable' : 'Enable'}  Wrap Lines`}
+                                  title={
+                                    wrapLinesEnabled
+                                      ? t('table.disableWrapLines')
+                                      : t('table.enableWrapLines')
+                                  }
                                   display="flex"
                                 >
                                   <MantineTooltip
-                                    label={`${wrapLinesEnabled ? 'Disable' : 'Enable'} Wrap Lines`}
+                                    label={
+                                      wrapLinesEnabled
+                                        ? t('table.disableWrapLines')
+                                        : t('table.enableWrapLines')
+                                    }
                                   >
                                     {wrapLinesEnabled ? (
                                       <IconTextWrapDisabled size={16} />
@@ -1069,7 +1089,11 @@ export const RawLogTable = memo(
                                   className="fs-6"
                                 >
                                   <MantineTooltip
-                                    label={`Download Table as CSV (max ${maxRows.toLocaleString()} rows)${isLimited ? ' - data truncated' : ''}`}
+                                    label={`${t('table.downloadCsv', {
+                                      maxRows: maxRows.toLocaleString(),
+                                    })}${
+                                      isLimited ? t('table.dataTruncated') : ''
+                                    }`}
                                   >
                                     <IconDownload size={16} />
                                   </MantineTooltip>
@@ -1077,10 +1101,10 @@ export const RawLogTable = memo(
                                 {onSettingsClick != null && (
                                   <UnstyledButton
                                     onClick={() => onSettingsClick()}
-                                    title="Settings"
+                                    title={t('table.settings')}
                                     display="flex"
                                   >
-                                    <MantineTooltip label="Settings">
+                                    <MantineTooltip label={t('table.settings')}>
                                       <IconSettings size={16} />
                                     </MantineTooltip>
                                   </UnstyledButton>
@@ -1142,7 +1166,7 @@ export const RawLogTable = memo(
                             onClick={() => {
                               _onRowExpandClick(row.original);
                             }}
-                            aria-label="View details for log entry"
+                            aria-label={t('table.viewDetails')}
                           >
                             {row
                               .getVisibleCells()
@@ -1254,24 +1278,22 @@ export const RawLogTable = memo(
                           </div>{' '}
                           {loadingDate != null && (
                             <>
-                              Searched <FormatTime value={loadingDate} />.{' '}
+                              {t('table.searched')}{' '}
+                              <FormatTime value={loadingDate} />.{' '}
                             </>
                           )}
-                          Loading results
+                          {t('table.loadingResults')}
                           {dateRange?.[0] != null && dateRange?.[1] != null ? (
                             <>
                               {' '}
-                              across{' '}
-                              {formatDistance(
-                                dateRange?.[1],
-                                dateRange?.[0],
-                              )}{' '}
+                              {t('table.across')}{' '}
+                              {formatDistance(dateRange?.[1], dateRange?.[0])}{' '}
                               {'('}
                               <FormatTime
                                 value={dateRange?.[0]}
                                 format="withYear"
                               />{' '}
-                              to{' '}
+                              {t('table.to')}{' '}
                               <FormatTime
                                 value={dateRange?.[1]}
                                 format="withYear"
@@ -1284,7 +1306,7 @@ export const RawLogTable = memo(
                       ) : hasNextPage == false &&
                         isLoading == false &&
                         dedupedRows.length > 0 ? (
-                        <div className="my-3">End of Results</div>
+                        <div className="my-3">{t('table.endOfResults')}</div>
                       ) : isError && error ? (
                         <ChartErrorState error={error} variant={errorVariant} />
                       ) : hasNextPage == false &&
@@ -1294,21 +1316,18 @@ export const RawLogTable = memo(
                           className="my-3"
                           data-testid="db-row-table-no-results"
                         >
-                          No results found.
-                          <Text mt="sm">
-                            Try checking the query explainer in the search bar
-                            if there are any search syntax issues.
-                          </Text>
+                          {t('table.noResults')}
+                          <Text mt="sm">{t('table.queryHint')}</Text>
                           {dateRange?.[0] != null && dateRange?.[1] != null ? (
                             <Text mt="sm">
-                              Searched Time Range:{' '}
+                              {t('table.searchedTimeRange')}{' '}
                               {formatDistance(dateRange?.[1], dateRange?.[0])}{' '}
                               {'('}
                               <FormatTime
                                 value={dateRange?.[0]}
                                 format="withYear"
                               />{' '}
-                              to{' '}
+                              {t('table.to')}{' '}
                               <FormatTime
                                 value={dateRange?.[1]}
                                 format="withYear"
@@ -1552,6 +1571,7 @@ function DBSqlRowTableComponent({
   errorVariant?: ChartErrorStateVariant;
   onResolvedColumnsChange?: (meta: ColumnMetaType[]) => void;
 }) {
+  const { t } = useTranslation('search');
   const { data: me } = api.useMe();
   const { toggleColumn, displayedColumns: contextDisplayedColumns } =
     useContext(RowSidePanelContext);
@@ -1825,7 +1845,7 @@ function DBSqlRowTableComponent({
       {denoiseResults && (
         <Box mb="xxs" px="sm">
           <Text fw="bold" fz="xs" mb="xxs">
-            Removed Noisy Event Patterns
+            {t('table.removedNoisyPatterns')}
           </Text>
           <Box mah={100} style={{ overflow: 'auto' }}>
             {noisyPatterns.data?.map(p => (
@@ -1834,7 +1854,7 @@ function DBSqlRowTableComponent({
               </Text>
             ))}
             {noisyPatternIds.length === 0 && (
-              <Text fz="xs">No noisy patterns found</Text>
+              <Text fz="xs">{t('table.noNoisyPatterns')}</Text>
             )}
           </Box>
         </Box>

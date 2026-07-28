@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { parseAsString, useQueryState } from 'nuqs';
+import { useTranslation } from 'react-i18next';
 import { tcFromSource } from '@hyperdx/common-utils/dist/core/metadata';
 import { convertDateRangeToGranularityString } from '@hyperdx/common-utils/dist/core/utils';
 import { TLogSource, TMetricSource } from '@hyperdx/common-utils/dist/types';
@@ -58,6 +59,7 @@ const NodeDetails = ({
   dateRange: [Date, Date];
   metricSource: TMetricSource;
 }) => {
+  const { t } = useTranslation('infrastructure');
   const where = `${metricSource.resourceAttributesExpression}.k8s.node.name:"${name}"`;
   const groupBy = ['k8s.node.name'];
 
@@ -105,10 +107,10 @@ const NodeDetails = ({
   return (
     <Grid.Col span={12}>
       <div className="p-2 gap-2 d-flex flex-wrap">
-        <PodDetailsProperty label="Node" value={name} />
+        <PodDetailsProperty label={t('kubernetes.details.node')} value={name} />
         {properties.ready !== undefined && (
           <PodDetailsProperty
-            label="Status"
+            label={t('kubernetes.details.status')}
             value={
               properties.ready === 1 ? (
                 <Badge
@@ -118,7 +120,7 @@ const NodeDetails = ({
                   tt="none"
                   size="md"
                 >
-                  Ready
+                  {t('kubernetes.nodes.ready')}
                 </Badge>
               ) : (
                 <Badge
@@ -128,7 +130,7 @@ const NodeDetails = ({
                   tt="none"
                   size="md"
                 >
-                  Not Ready
+                  {t('kubernetes.nodes.notReady')}
                 </Badge>
               )
             }
@@ -136,7 +138,7 @@ const NodeDetails = ({
         )}
         {properties.uptime && (
           <PodDetailsProperty
-            label="Uptime"
+            label={t('kubernetes.details.uptime')}
             value={formatUptime(properties.uptime)}
           />
         )}
@@ -154,6 +156,7 @@ function NodeLogs({
   logSource: TLogSource;
   where: string;
 }) {
+  const { t } = useTranslation('infrastructure');
   const [resultType, setResultType] = React.useState<'all' | 'error'>('all');
 
   const _where = where + (resultType === 'error' ? ' Severity:err' : '');
@@ -162,7 +165,7 @@ function NodeLogs({
     <Card p="md">
       <Card.Section p="md" py="xs">
         <Flex justify="space-between" align="center">
-          Latest Node Logs & Spans
+          {t('kubernetes.details.nodeLogs')}
           <Flex gap="xs" align="center">
             <SegmentedControl
               size="xs"
@@ -173,8 +176,11 @@ function NodeLogs({
                 }
               }}
               data={[
-                { label: 'All', value: 'all' },
-                { label: 'Errors', value: 'error' },
+                { label: t('kubernetes.details.resultsAll'), value: 'all' },
+                {
+                  label: t('kubernetes.details.resultsErrors'),
+                  value: 'error',
+                },
               ]}
             />
             {/*
@@ -240,6 +246,7 @@ export default function NodeDetailsSidePanel({
   metricSource: TMetricSource;
   logSource: TLogSource;
 }) {
+  const { t } = useTranslation('infrastructure');
   const [nodeName, setNodeName] = useQueryState(
     'nodeName',
     parseAsString.withDefault(''),
@@ -366,7 +373,7 @@ export default function NodeDetailsSidePanel({
                 <Card p="md" data-testid="nodes-details-cpu-usage-chart">
                   <Card.Section p="md" py="sm" h={CHART_HEIGHT}>
                     <DBTimeChart
-                      title="CPU Usage by Pod"
+                      title={t('kubernetes.charts.cpuUsageByPod')}
                       config={convertV1ChartConfigToV2(
                         {
                           dateRange,
@@ -397,7 +404,7 @@ export default function NodeDetailsSidePanel({
                 <Card p="md">
                   <Card.Section p="md" py="sm" h={CHART_HEIGHT}>
                     <DBTimeChart
-                      title="Memory Usage by Pod"
+                      title={t('kubernetes.charts.memoryUsageByPod')}
                       config={convertV1ChartConfigToV2(
                         {
                           dateRange,

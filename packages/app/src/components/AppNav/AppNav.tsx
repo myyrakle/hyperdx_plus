@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Router, { useRouter } from 'next/router';
 import cx from 'classnames';
+import { Trans, useTranslation } from 'react-i18next';
 import HyperDX from '@hyperdx/browser';
 import { SavedSearchListApiResponse } from '@hyperdx/common-utils/dist/types';
 import {
@@ -62,42 +63,47 @@ const APP_VERSION =
 // Navigation link configuration
 type NavLinkConfig = {
   id: string;
-  label: string;
+  labelKey:
+    | 'links.chartExplorer'
+    | 'links.alerts'
+    | 'links.clientSessions'
+    | 'links.continuousProfiling'
+    | 'links.serviceMap';
   href: string;
   icon: React.ReactNode;
   isBeta?: boolean;
-  cloudOnly?: boolean; // Only show when not in local mode
+  cloudOnly?: boolean;
 };
 
 const NAV_LINKS: NavLinkConfig[] = [
   {
     id: 'chart',
-    label: 'Chart Explorer',
+    labelKey: 'links.chartExplorer',
     href: '/chart',
     icon: <IconChartDots size={16} />,
   },
   {
     id: 'alerts',
-    label: 'Alerts',
+    labelKey: 'links.alerts',
     href: '/alerts',
     icon: <IconBell size={16} />,
     cloudOnly: true,
   },
   {
     id: 'sessions',
-    label: 'Client Sessions',
+    labelKey: 'links.clientSessions',
     href: '/sessions',
     icon: <IconDeviceLaptop size={16} />,
   },
   {
     id: 'continuous-profiling',
-    label: 'Continuous Profiling',
+    labelKey: 'links.continuousProfiling',
     href: '/continuous-profiling',
     icon: <IconFlame size={16} />,
   },
   {
     id: 'service-map',
-    label: 'Service Map',
+    labelKey: 'links.serviceMap',
     href: '/service-map',
     icon: <IconSitemap size={16} />,
     isBeta: true,
@@ -105,6 +111,7 @@ const NAV_LINKS: NavLinkConfig[] = [
 ];
 
 export default function AppNav({ fixed = false }: { fixed?: boolean }) {
+  const { t } = useTranslation('navigation');
   const wordmark = useWordmark();
   const logomark = useLogomark({ size: 22 });
 
@@ -359,9 +366,9 @@ export default function AppNav({ fixed = false }: { fixed?: boolean }) {
                       color="gray"
                       variant="light"
                       fw="normal"
-                      title="Showing time in UTC"
+                      title={t('time.showingUtc')}
                     >
-                      UTC
+                      {t('time.utc')}
                     </Badge>
                   )}
                 </Group>
@@ -373,7 +380,7 @@ export default function AppNav({ fixed = false }: { fixed?: boolean }) {
               className={cx(styles.collapseButton, {
                 [styles.collapseButtonCollapsed]: isCollapsed,
               })}
-              title="Collapse/Expand Navigation"
+              title={t('collapse')}
               onClick={() => setIsPreferCollapsed((v: boolean) => !v)}
             >
               <IconArrowBarToLeft size={16} />
@@ -390,7 +397,7 @@ export default function AppNav({ fixed = false }: { fixed?: boolean }) {
           <div style={{ width: navWidth }} className={styles.navLinks}>
             {/* Search */}
             <AppNavLink
-              label="Search"
+              label={t('links.search')}
               icon={<IconTable size={16} />}
               href="/search"
               isActive={pathname === '/search'}
@@ -398,7 +405,7 @@ export default function AppNav({ fixed = false }: { fixed?: boolean }) {
 
             {/* Saved Searches */}
             <AppNavLink
-              label="Saved Searches"
+              label={t('links.savedSearches')}
               href="/search/list"
               icon={<IconDeviceFloppy size={16} />}
               isActive={isSavedSearchActive}
@@ -413,11 +420,19 @@ export default function AppNav({ fixed = false }: { fixed?: boolean }) {
                     favoritedSavedSearches.map(renderSavedSearchLink)
                   ) : favorites != null && savedSearches != null ? (
                     <Text size="xs" c="dimmed" pl="lg" pr="xs" py={4} lh={1.4}>
-                      No favorites. Star on{' '}
-                      <Anchor component={Link} href="/search/list" size="xs">
-                        Saved Searches
-                      </Anchor>
-                      .
+                      <Trans
+                        t={t}
+                        i18nKey="favorites.emptySavedSearches"
+                        components={{
+                          resource: (
+                            <Anchor
+                              component={Link}
+                              href="/search/list"
+                              size="xs"
+                            />
+                          ),
+                        }}
+                      />
                     </Text>
                   ) : null}
                 </div>
@@ -428,7 +443,7 @@ export default function AppNav({ fixed = false }: { fixed?: boolean }) {
               link => (
                 <AppNavLink
                   key={link.id}
-                  label={link.label}
+                  label={t(link.labelKey)}
                   href={link.href}
                   icon={link.icon}
                   isBeta={link.isBeta}
@@ -438,7 +453,7 @@ export default function AppNav({ fixed = false }: { fixed?: boolean }) {
 
             {/* Dashboards */}
             <AppNavLink
-              label="Dashboards"
+              label={t('links.dashboards')}
               href="/dashboards/list"
               icon={<IconLayoutGrid size={16} />}
               isActive={isDashboardsActive}
@@ -453,15 +468,19 @@ export default function AppNav({ fixed = false }: { fixed?: boolean }) {
                     favoritedDashboards.map(renderDashboardLink)
                   ) : favorites != null && dashboards != null ? (
                     <Text size="xs" c="dimmed" pl="lg" pr="xs" py={4} lh={1.4}>
-                      No favorites. Star on{' '}
-                      <Anchor
-                        component={Link}
-                        href="/dashboards/list"
-                        size="xs"
-                      >
-                        Dashboards
-                      </Anchor>
-                      .
+                      <Trans
+                        t={t}
+                        i18nKey="favorites.emptyDashboards"
+                        components={{
+                          resource: (
+                            <Anchor
+                              component={Link}
+                              href="/dashboards/list"
+                              size="xs"
+                            />
+                          ),
+                        }}
+                      />
                     </Text>
                   ) : null}
                 </div>
@@ -477,7 +496,7 @@ export default function AppNav({ fixed = false }: { fixed?: boolean }) {
             {/* Team Settings (Cloud only) */}
             {!IS_LOCAL_MODE && (
               <AppNavLink
-                label="Team Settings"
+                label={t('links.teamSettings')}
                 href="/team"
                 icon={<IconSettings size={16} />}
               />
@@ -507,7 +526,7 @@ export default function AppNav({ fixed = false }: { fixed?: boolean }) {
               }}
             >
               <Text size="xs" c="dimmed">
-                Join us & build the future of high scale observability &rarr;
+                {t('careers')}
               </Text>
             </Link>
           )}
