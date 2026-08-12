@@ -15,9 +15,7 @@ const source: any = {
   implicitColumnExpression: 'Body',
 };
 
-const savedSearch: any = {
-  id: 'saved-1',
-  select: 'Timestamp, Body',
+const query: any = {
   where: 'level: error',
   whereLanguage: 'lucene',
   orderBy: 'Timestamp DESC',
@@ -33,7 +31,7 @@ const call = (overrides: Record<string, unknown> = {}) =>
   fetchGroupSampleFields({
     clickhouseClient: makeClient([]) as any,
     metadata: {} as any,
-    savedSearch,
+    query,
     source,
     startTime: new Date('2026-08-12T00:00:00Z'),
     endTime: new Date('2026-08-12T00:05:00Z'),
@@ -77,7 +75,7 @@ describe('fetchGroupSampleFields', () => {
     expect(chartConfig.limit).toEqual({ limit: 1, offset: 0 });
   });
 
-  it('keeps the saved search predicate and ordering', async () => {
+  it('keeps the predicate and ordering of the alert query', async () => {
     await call();
 
     const chartConfig = renderChartConfig.mock.calls[0][0];
@@ -151,5 +149,31 @@ describe('fetchGroupSampleFields', () => {
     renderChartConfig.mockRejectedValueOnce(new Error('bad expression'));
 
     expect(await call()).toEqual([]);
+  });
+});
+
+describe('fetchGroupSampleFields for tile alerts', () => {
+  it('applies the tile filters alongside the group filter', async () => {
+    await call({
+      query: {
+        where: 'StatusCode:Error',
+        whereLanguage: 'lucene',
+        filters: [{ type: 'sql', condition: 'ServiceName IS NOT NULL' }],
+      },
+      groupFilterCondition: "toString(StatusMessage) = 'boom'",
+    });
+
+    expect(renderChartConfig.mock.calls[0][0].filters).toEqual([
+      { type: 'sql', condition: 'ServiceName IS NOT NULL' },
+      { type: 'sql', condition: "toString(StatusMessage) = 'boom'" },
+    ]);
+  });
+
+  it('orders by timestamp descending when the query has no ordering', async () => {
+    // Tiles have no orderBy, so without a default the "representative" row
+    // would be whichever row ClickHouse happened to return first.
+    await call({ query: { where: '', whereLanguage: 'sql' } });
+
+    expect(renderChartConfig.mock.calls[0][0].orderBy).toBe('Timestamp DESC');
   });
 });

@@ -649,9 +649,6 @@ const zChannel = z.object({
 const zSavedSearchAlert = z.object({
   source: z.literal(AlertSource.SAVED_SEARCH),
   groupBy: z.string().optional(),
-  // Comma-separated SQL expressions rendered as labelled fields by the
-  // slack_error webhook service. See zSavedSearchAlert in common-utils.
-  displayFields: z.string().max(2048).optional(),
   savedSearchId: z.string().min(1),
 });
 
@@ -675,6 +672,9 @@ export const alertSchema = z
     message: z.string().min(1).max(4096).nullish(),
     note: alertNoteSchema,
     numConsecutiveWindows: z.number().int().min(1).nullish(),
+    // Comma-separated SQL expressions rendered as labelled fields by the
+    // slack_error webhook service. Applies to both alert sources.
+    displayFields: z.string().max(2048).optional(),
   })
   .and(zSavedSearchAlert.or(zTileAlert))
   .superRefine(validateAlertScheduleOffsetMinutes)

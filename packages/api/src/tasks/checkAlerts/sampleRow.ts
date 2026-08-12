@@ -12,13 +12,13 @@ import {
 } from '@hyperdx/common-utils/dist/types';
 import { serializeError } from 'serialize-error';
 
-import { ISavedSearch } from '@/models/savedSearch';
 import { ISource } from '@/models/source';
 import {
   AlertMessageField,
   formatFieldLabel,
   makeMessageField,
 } from '@/tasks/checkAlerts/message';
+import { SearchLinkQuery } from '@/tasks/checkAlerts/searchLink';
 import logger from '@/utils/logger';
 
 /**
@@ -36,7 +36,7 @@ export const fetchGroupSampleFields = async ({
   endTime,
   groupFilterCondition,
   metadata,
-  savedSearch,
+  query,
   source,
   startTime,
 }: {
@@ -46,7 +46,8 @@ export const fetchGroupSampleFields = async ({
   endTime: Date;
   groupFilterCondition?: string;
   metadata: Metadata;
-  savedSearch: ISavedSearch;
+  /** The alert's predicate — from the saved search, or from the tile config. */
+  query: SearchLinkQuery;
   source: ISource;
   startTime: Date;
 }): Promise<AlertMessageField[]> => {
@@ -68,8 +69,8 @@ export const fetchGroupSampleFields = async ({
     dateRange: [startTime, endTime],
     from: source.from,
     select: expressions.join(', '),
-    where: savedSearch.where,
-    whereLanguage: savedSearch.whereLanguage,
+    where: query.where ?? '',
+    whereLanguage: query.whereLanguage ?? undefined,
     implicitColumnExpression: isTextSource
       ? source.implicitColumnExpression
       : undefined,
@@ -78,9 +79,16 @@ export const fetchGroupSampleFields = async ({
       : undefined,
     ...pickSampleWeightExpressionProps(source),
     timestampValueExpression: source.timestampValueExpression,
-    orderBy: savedSearch.orderBy,
-    ...(groupFilterCondition && {
-      filters: [{ type: 'sql', condition: groupFilterCondition }],
+    // Tiles carry no ordering, so without a default the "representative" row
+    // would be whichever row ClickHouse happened to return first.
+    orderBy: query.orderBy || `${source.timestampValueExpression} DESC`,
+    ...((query.filters?.length || groupFilterCondition) && {
+      filters: [
+        ...(query.filters ?? []),
+        ...(groupFilterCondition
+          ? [{ type: 'sql' as const, condition: groupFilterCondition }]
+          : []),
+      ],
     }),
     limit: { limit: 1, offset: 0 },
   };
@@ -89,14 +97,14 @@ export const fetchGroupSampleFields = async ({
   }
 
   try {
-    const query = await renderChartConfig(
+    const rendered = await renderChartConfig(
       chartConfig,
       metadata,
       source.querySettings,
     );
     const result = await clickhouseClient.query<'JSON'>({
-      query: query.sql,
-      query_params: query.params,
+      query: rendered.sql,
+      query_params: rendered.params,
       format: 'JSON',
     });
     const { data } = await result.json<ResponseJSON<Record<string, unknown>>>();
@@ -116,7 +124,7 @@ export const fetchGroupSampleFields = async ({
   } catch (e) {
     logger.error(
       {
-        savedSearchId: savedSearch.id,
+        sourceId: source.id,
         displayFields,
         error: serializeError(e),
       },

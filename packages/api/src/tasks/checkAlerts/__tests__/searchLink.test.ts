@@ -1,4 +1,84 @@
-import { buildSearchLinkUrl } from '@/tasks/checkAlerts/searchLink';
+import {
+  buildGroupSearchLinkUrl,
+  buildSearchLinkUrl,
+} from '@/tasks/checkAlerts/searchLink';
+
+describe('buildGroupSearchLinkUrl', () => {
+  const build = (overrides: Record<string, unknown> = {}) =>
+    buildGroupSearchLinkUrl({
+      frontendUrl: 'http://app:8080',
+      startTime: new Date('2023-03-17T22:13:03.103Z'),
+      endTime: new Date('2023-03-17T22:13:59.103Z'),
+      sourceId: 'source-1',
+      groupFilterCondition: "toString(ServiceName) = 'api'",
+      query: {
+        where: 'StatusCode:Error',
+        whereLanguage: 'lucene',
+        filters: [{ type: 'sql', condition: 'ServiceName IS NOT NULL' }],
+      },
+      ...overrides,
+    });
+
+  const readEncoded = (url: string, key: string): string | null => {
+    const raw = new URL(url).searchParams.get(key);
+    return raw == null ? null : decodeURIComponent(raw);
+  };
+
+  it('targets the source-based search route, which needs no saved search', () => {
+    expect(new URL(build()).pathname).toBe('/search');
+  });
+
+  it('carries the source and time range', () => {
+    const params = new URL(build()).searchParams;
+
+    expect(params.get('source')).toBe('source-1');
+    expect(params.get('from')).toBe('1679091183103');
+    expect(params.get('to')).toBe('1679091239103');
+    expect(params.get('isLive')).toBe('false');
+  });
+
+  it('carries the tile predicate', () => {
+    const url = build();
+
+    expect(readEncoded(url, 'where')).toBe('StatusCode:Error');
+    expect(new URL(url).searchParams.get('whereLanguage')).toBe('lucene');
+  });
+
+  it('appends the group filter after the tile filters', () => {
+    expect(JSON.parse(readEncoded(build(), 'filters')!)).toEqual([
+      { type: 'sql', condition: 'ServiceName IS NOT NULL' },
+      { type: 'sql', condition: "toString(ServiceName) = 'api'" },
+    ]);
+  });
+
+  it('sends only the group filter when the tile has none', () => {
+    const url = build({
+      query: { where: '', whereLanguage: 'sql', filters: undefined },
+    });
+
+    expect(JSON.parse(readEncoded(url, 'filters')!)).toEqual([
+      { type: 'sql', condition: "toString(ServiceName) = 'api'" },
+    ]);
+  });
+
+  it('omits an empty predicate rather than sending a blank one', () => {
+    const params = new URL(
+      build({ query: { where: '', whereLanguage: 'sql' } }),
+    ).searchParams;
+
+    expect(params.get('where')).toBeNull();
+  });
+
+  it('round-trips a condition containing quotes', () => {
+    const condition = "toString(StatusMessage) = 'it\\'s broken'";
+
+    expect(
+      JSON.parse(
+        readEncoded(build({ groupFilterCondition: condition }), 'filters')!,
+      ),
+    ).toContainEqual({ type: 'sql', condition });
+  });
+});
 
 const FRONTEND_URL = 'http://app:8080';
 const START = new Date('2023-03-17T22:13:03.103Z');

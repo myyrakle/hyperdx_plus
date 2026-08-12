@@ -1,6 +1,29 @@
 import { splitAndTrimWithBracket } from '@hyperdx/common-utils/dist/core/utils';
+import { SelectList } from '@hyperdx/common-utils/dist/types';
 
 import logger from '@/utils/logger';
+
+/**
+ * Group-by as stored on an alert. Saved-search alerts keep a comma-separated
+ * string; tile alerts keep the chart config's `SelectList`.
+ */
+export type AlertGroupBy = string | SelectList | undefined;
+
+/**
+ * Flatten either shape into the ordered SQL expressions that were grouped on.
+ *
+ * A `SelectList` entry's `alias` is deliberately ignored: it only exists in the
+ * SELECT list, so a WHERE clause at the same level cannot reference it.
+ */
+const groupByExpressions = (groupBy: AlertGroupBy): string[] => {
+  if (!groupBy) {
+    return [];
+  }
+  if (typeof groupBy === 'string') {
+    return splitAndTrimWithBracket(groupBy).filter(Boolean);
+  }
+  return groupBy.map(column => column.valueExpression.trim()).filter(Boolean);
+};
 
 /**
  * Escape a value for use inside a ClickHouse single-quoted string literal.
@@ -24,14 +47,14 @@ const escapeStringLiteral = (value: string): string =>
  * shapes disagree. Callers then skip anything group-scoped.
  */
 export const zipGroupValues = (
-  groupBy: string | undefined,
+  groupBy: AlertGroupBy,
   attributes: Record<string, string>,
 ): Array<[string, string]> | undefined => {
   if (!groupBy) {
     return undefined;
   }
 
-  const expressions = splitAndTrimWithBracket(groupBy).filter(Boolean);
+  const expressions = groupByExpressions(groupBy);
   const values = Object.values(attributes);
 
   if (expressions.length === 0 || expressions.length !== values.length) {
@@ -63,7 +86,7 @@ export const zipGroupValues = (
  * group-by, or a shape mismatch). Callers fall back to an unfiltered query.
  */
 export const buildGroupFilterCondition = (
-  groupBy: string | undefined,
+  groupBy: AlertGroupBy,
   attributes: Record<string, string>,
 ): string | undefined => {
   const pairs = zipGroupValues(groupBy, attributes);

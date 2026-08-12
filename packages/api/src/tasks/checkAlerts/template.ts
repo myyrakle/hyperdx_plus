@@ -37,6 +37,7 @@ import {
   computeAliasWithClauses,
   doesExceedThreshold,
 } from '@/tasks/checkAlerts';
+import { resolveAlertQuerySpec } from '@/tasks/checkAlerts/alertQuerySpec';
 import {
   buildGroupFilterCondition,
   zipGroupValues,
@@ -53,6 +54,7 @@ import {
 } from '@/tasks/checkAlerts/providers';
 import { buildSlackErrorPayload } from '@/tasks/checkAlerts/providers/slackError';
 import { fetchGroupSampleFields } from '@/tasks/checkAlerts/sampleRow';
+import { buildGroupSearchLinkUrl } from '@/tasks/checkAlerts/searchLink';
 import { escapeJsonString, unflattenObject } from '@/tasks/util';
 import { truncateString } from '@/utils/common';
 import { getCounter, getHistogram } from '@/utils/instrumentation';
@@ -662,10 +664,14 @@ export const renderAlertTemplate = async ({
     isUTC: true,
   })})`;
 
+  // Where this alert's grouping and predicate actually live — the alert itself
+  // for saved searches, the tile config for dashboard tiles.
+  const querySpec = resolveAlertQuerySpec({ alert, dashboard, savedSearch });
+
   // Restricts group-scoped queries and links to the group that fired.
   // `undefined` for non-grouped alerts, which then behave exactly as before.
   const groupFilterCondition = buildGroupFilterCondition(
-    alert.groupBy,
+    querySpec?.groupBy,
     view.attributesFlat,
   );
 
@@ -676,22 +682,26 @@ export const renderAlertTemplate = async ({
    */
   const resolveParts = _.once(
     async (): Promise<AlertMessageParts | undefined> => {
-      if (alert.source !== AlertSource.SAVED_SEARCH || savedSearch == null) {
+      if (querySpec == null) {
         return undefined;
       }
 
-      const groupPairs = zipGroupValues(alert.groupBy, view.attributesFlat);
+      const groupPairs = zipGroupValues(querySpec.groupBy, view.attributesFlat);
       const groupFields = (groupPairs ?? []).map(([expression, groupValue]) =>
         makeMessageField(formatFieldLabel(expression), groupValue),
       );
 
       let sampleFields: AlertMessageParts['sampleFields'] = [];
       if (!isAlertResolved(state) && alert.displayFields && source != null) {
-        const aliasWith = await computeAliasWithClauses(
-          savedSearch,
-          source,
-          metadata,
-        ).catch(() => undefined);
+        // Saved searches may alias columns in their select; tiles do not.
+        const aliasWith =
+          savedSearch != null
+            ? await computeAliasWithClauses(
+                savedSearch,
+                source,
+                metadata,
+              ).catch(() => undefined)
+            : undefined;
         sampleFields = await fetchGroupSampleFields({
           aliasWith: aliasWith ?? undefined,
           clickhouseClient,
@@ -699,28 +709,49 @@ export const renderAlertTemplate = async ({
           endTime,
           groupFilterCondition,
           metadata,
-          savedSearch,
+          query: querySpec.query,
           source,
           startTime,
         });
       }
 
+      const originLink = buildAlertMessageTemplateHdxLink(alertProvider, view);
+      // The title takes people to the rows of the group that fired; the alert's
+      // own chart stays reachable from the footer.
+      const titleLink = groupFilterCondition
+        ? buildGroupSearchLinkUrl({
+            endTime,
+            frontendUrl: config.FRONTEND_URL,
+            groupFilterCondition,
+            query: querySpec.query,
+            sourceId: querySpec.sourceId,
+            startTime,
+          })
+        : originLink;
+
       return {
         metricValue: formatValueToMatchThreshold(value, alert.threshold),
-        thresholdText: `lines found, which ${describeThresholdViolation(
-          alert.thresholdType,
-        )} the threshold of ${describeThreshold(alert)} lines`,
+        thresholdText:
+          alert.source === AlertSource.SAVED_SEARCH
+            ? `lines found, which ${describeThresholdViolation(
+                alert.thresholdType,
+              )} the threshold of ${describeThreshold(alert)} lines`
+            : `${
+                doesExceedThreshold(alert, value)
+                  ? describeThresholdViolation(alert.thresholdType)
+                  : describeThresholdResolution(alert.thresholdType)
+              } ${describeThreshold(alert)}`,
         totalCount: value,
         timeRangeText: timeRangeMessage,
         group: groupFields,
         sampleFields,
-        ...(groupFilterCondition && {
-          groupSearchLink: alertProvider.buildLogSearchLink({
-            endTime,
-            groupFilterCondition,
-            savedSearch,
-            startTime,
-          }),
+        titleLink,
+        ...(titleLink !== originLink && {
+          originLink: {
+            url: originLink,
+            label:
+              alert.source === AlertSource.TILE ? 'View chart' : 'View search',
+          },
         }),
       };
     },

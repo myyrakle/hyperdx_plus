@@ -1,0 +1,93 @@
+import { useForm } from 'react-hook-form';
+import { WebhookService } from '@hyperdx/common-utils/dist/types';
+import { MantineProvider } from '@mantine/core';
+import { render, screen } from '@testing-library/react';
+
+import api from '@/api';
+import { TileAlertEditor } from '@/components/DBEditTimeChartForm/TileAlertEditor';
+
+jest.mock('@/api', () => ({
+  __esModule: true,
+  default: {
+    useWebhooks: jest.fn(),
+    useAlert: () => ({ data: undefined }),
+  },
+}));
+
+jest.mock('@/components/Alerts', () => ({
+  __esModule: true,
+  AlertChannelForm: () => <div data-testid="alert-channel-form" />,
+}));
+
+jest.mock('@/components/SQLEditor/SQLInlineEditor', () => ({
+  __esModule: true,
+  SQLInlineEditorControlled: () => <div data-testid="sql-inline-editor" />,
+}));
+
+let webhooks: Array<{ _id: string; service: WebhookService }> = [];
+
+const alert: any = {
+  interval: '5m',
+  threshold: 1,
+  thresholdType: 'above',
+  channel: { type: 'webhook', webhookId: 'webhook-id' },
+};
+
+const Harness = () => {
+  const { control, setValue } = useForm<any>({ defaultValues: { alert } });
+  return (
+    <TileAlertEditor
+      control={control}
+      setValue={setValue}
+      alert={alert}
+      onRemove={jest.fn()}
+      tableConnection={
+        { databaseName: 'default', tableName: 'otel_traces' } as any
+      }
+    />
+  );
+};
+
+const renderEditor = () =>
+  render(
+    <MantineProvider>
+      <Harness />
+    </MantineProvider>,
+  );
+
+const sqlEditorCount = () =>
+  screen.queryAllByTestId('sql-inline-editor').length;
+
+beforeEach(() => {
+  webhooks = [];
+
+  jest
+    .mocked(api.useWebhooks)
+    .mockImplementation(
+      () => ({ data: { data: webhooks }, refetch: jest.fn() }) as any,
+    );
+});
+
+describe('TileAlertEditor display fields', () => {
+  it('offers the input when the alert goes to a Slack (Error) webhook', () => {
+    webhooks = [{ _id: 'webhook-id', service: WebhookService.SlackError }];
+
+    renderEditor();
+
+    expect(sqlEditorCount()).toBe(1);
+  });
+
+  it('is hidden for services that ignore display fields', () => {
+    webhooks = [{ _id: 'webhook-id', service: WebhookService.Slack }];
+
+    renderEditor();
+
+    expect(sqlEditorCount()).toBe(0);
+  });
+
+  it('is hidden while the webhook list is still empty', () => {
+    renderEditor();
+
+    expect(sqlEditorCount()).toBe(0);
+  });
+});

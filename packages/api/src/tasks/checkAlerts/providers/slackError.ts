@@ -51,18 +51,19 @@ const fieldsBlock = (fields: AlertMessageField[]) => {
 };
 
 const buildBlocks = (message: Message): SlackBlocks => {
-  const titleText = `*<${message.hdxLink} | ${message.title}>*`;
   const { parts } = message;
 
-  // No structured parts means the representative-row lookup produced nothing;
-  // deliver the plain body rather than dropping the notification.
+  // No structured parts means the alert's query could not be resolved; deliver
+  // the plain body rather than dropping the notification.
   if (!parts) {
-    return [section(`${titleText}\n${message.body}`)];
+    return [
+      section(`*<${message.hdxLink} | ${message.title}>*\n${message.body}`),
+    ];
   }
 
   const isResolved = message.state === AlertState.OK;
   const blocks: SlackBlocks = [
-    section(titleText),
+    section(`*<${parts.titleLink} | ${message.title}>*`),
     section(
       isResolved
         ? 'The alert has been resolved.'
@@ -92,8 +93,8 @@ const buildBlocks = (message: Message): SlackBlocks => {
 
   const contextParts = [
     `${parts.timeRangeText} · ${parts.totalCount} events`,
-    ...(parts.groupSearchLink
-      ? [`<${parts.groupSearchLink} | View this group in HyperDX>`]
+    ...(parts.originLink
+      ? [`<${parts.originLink.url} | ${parts.originLink.label}>`]
       : []),
   ];
   blocks.push({

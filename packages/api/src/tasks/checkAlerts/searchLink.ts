@@ -1,6 +1,21 @@
-import { Filter } from '@hyperdx/common-utils/dist/types';
+import {
+  Filter,
+  SearchConditionLanguage,
+} from '@hyperdx/common-utils/dist/types';
 
 import { ISavedSearch } from '@/models/savedSearch';
+
+/**
+ * The predicate a search link has to reproduce. Saved-search alerts take it from
+ * the saved search, tile alerts from the tile's chart config.
+ */
+export type SearchLinkQuery = {
+  where?: string | null;
+  whereLanguage?: SearchConditionLanguage | null;
+  select?: string | null;
+  orderBy?: string | null;
+  filters?: Filter[] | null;
+};
 
 /**
  * Encode a value the way the app's `parseAsStringEncoded` / `parseAsJsonEncoded`
@@ -11,17 +26,59 @@ import { ISavedSearch } from '@/models/savedSearch';
 const encodeParam = (value: string): string => encodeURIComponent(value);
 
 /**
- * Build a link to the search page for an alert.
+ * Put the whole search config on the URL, scoped to one group.
+ *
+ * The search page only hydrates from its own stored config when the URL carries
+ * *no* config at all (`isSearchConfigEmpty` in `DBSearchPage`), so adding a
+ * filter means everything else has to travel with it — otherwise
+ * source/where/select land empty.
+ */
+const setSearchConfigParams = (
+  queryParams: URLSearchParams,
+  {
+    groupFilterCondition,
+    query,
+    sourceId,
+  }: {
+    groupFilterCondition: string;
+    query: SearchLinkQuery;
+    sourceId: string;
+  },
+) => {
+  const filters: Filter[] = [
+    ...(query.filters ?? []),
+    { type: 'sql', condition: groupFilterCondition },
+  ];
+
+  queryParams.set('source', sourceId);
+  if (query.whereLanguage) {
+    queryParams.set('whereLanguage', query.whereLanguage);
+  }
+  if (query.where) {
+    queryParams.set('where', encodeParam(query.where));
+  }
+  if (query.select) {
+    queryParams.set('select', encodeParam(query.select));
+  }
+  if (query.orderBy) {
+    queryParams.set('orderBy', encodeParam(query.orderBy));
+  }
+  queryParams.set('filters', encodeParam(JSON.stringify(filters)));
+};
+
+const timeRangeParams = (startTime: Date, endTime: Date) =>
+  new URLSearchParams({
+    from: startTime.getTime().toString(),
+    to: endTime.getTime().toString(),
+    isLive: 'false',
+  });
+
+/**
+ * Build a link to a saved search for an alert.
  *
  * Without `groupFilterCondition` this yields the time-range-only link the app
  * has always produced: landing on `/search/:id` with no config params lets the
  * page hydrate itself from the saved search.
- *
- * With `groupFilterCondition` the link must additionally scope the search to the
- * group that fired. The page only hydrates from the saved search when the URL
- * carries *no* config at all (`isSearchConfigEmpty` in `DBSearchPage`), so
- * adding a filter means the whole config has to travel in the URL too —
- * otherwise source/where/select would land empty.
  */
 export const buildSearchLinkUrl = ({
   endTime,
@@ -37,33 +94,49 @@ export const buildSearchLinkUrl = ({
   startTime: Date;
 }): string => {
   const url = new URL(`${frontendUrl}/search/${savedSearch.id}`);
-  const queryParams = new URLSearchParams({
-    from: startTime.getTime().toString(),
-    to: endTime.getTime().toString(),
-    isLive: 'false',
-  });
+  const queryParams = timeRangeParams(startTime, endTime);
 
   if (groupFilterCondition) {
-    const filters: Filter[] = [
-      ...(savedSearch.filters ?? []),
-      { type: 'sql', condition: groupFilterCondition },
-    ];
-
-    queryParams.set('source', String(savedSearch.source));
-    if (savedSearch.whereLanguage) {
-      queryParams.set('whereLanguage', savedSearch.whereLanguage);
-    }
-    if (savedSearch.where) {
-      queryParams.set('where', encodeParam(savedSearch.where));
-    }
-    if (savedSearch.select) {
-      queryParams.set('select', encodeParam(savedSearch.select));
-    }
-    if (savedSearch.orderBy) {
-      queryParams.set('orderBy', encodeParam(savedSearch.orderBy));
-    }
-    queryParams.set('filters', encodeParam(JSON.stringify(filters)));
+    setSearchConfigParams(queryParams, {
+      groupFilterCondition,
+      query: savedSearch,
+      sourceId: String(savedSearch.source),
+    });
   }
+
+  url.search = queryParams.toString();
+  return url.toString();
+};
+
+/**
+ * Build a link to the row list for one group, without a saved search.
+ *
+ * Tile alerts have no saved search to land on, but `/search` accepts a bare
+ * source plus a config, so the group's rows are still reachable.
+ */
+export const buildGroupSearchLinkUrl = ({
+  endTime,
+  frontendUrl,
+  groupFilterCondition,
+  query,
+  sourceId,
+  startTime,
+}: {
+  endTime: Date;
+  frontendUrl: string;
+  groupFilterCondition: string;
+  query: SearchLinkQuery;
+  sourceId: string;
+  startTime: Date;
+}): string => {
+  const url = new URL(`${frontendUrl}/search`);
+  const queryParams = timeRangeParams(startTime, endTime);
+
+  setSearchConfigParams(queryParams, {
+    groupFilterCondition,
+    query,
+    sourceId,
+  });
 
   url.search = queryParams.toString();
   return url.toString();

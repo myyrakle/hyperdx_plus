@@ -509,12 +509,6 @@ export const zAlertChannel = z.object({
 export const zSavedSearchAlert = z.object({
   source: z.literal(AlertSource.SAVED_SEARCH),
   groupBy: z.string().optional(),
-  /**
-   * Comma-separated SQL expressions pulled from a representative row of the
-   * alerting group and rendered as labelled fields in the notification.
-   * Only the `slack_error` webhook service renders these.
-   */
-  displayFields: z.string().optional(),
   savedSearchId: z.string().min(1),
 });
 
@@ -631,6 +625,12 @@ export const AlertBaseObjectSchema = z.object({
     })
     .optional(),
   numConsecutiveWindows: z.number().int().min(1).nullish(),
+  /**
+   * Comma-separated SQL expressions pulled from a representative row of the
+   * alerting group and rendered as labelled fields in the notification.
+   * Only the `slack_error` webhook service renders these.
+   */
+  displayFields: z.string().optional(),
 });
 
 // Keep AlertBaseSchema as a ZodObject for backwards compatibility with

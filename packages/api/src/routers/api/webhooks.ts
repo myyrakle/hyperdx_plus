@@ -472,6 +472,7 @@ router.post(
               'lines found, which exceeds the threshold of 5 lines',
             totalCount: 12,
             timeRangeText: 'Time Range (UTC): [test window)',
+            titleLink: 'https://hyperdx.io',
             group: [makeMessageField('error_group_id', 'example-group-id')],
             sampleFields: [
               makeMessageField('exception.message', 'Example error message'),

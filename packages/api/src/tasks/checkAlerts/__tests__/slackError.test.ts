@@ -16,6 +16,7 @@ const baseParts: AlertMessageParts = {
     'Time Range (UTC): [2026-08-12T00:00:00Z - 2026-08-12T00:05:00Z)',
   group: [makeMessageField('error_group_id', 'abc-123')],
   sampleFields: [makeMessageField('exception.message', 'connection refused')],
+  titleLink: 'http://app:8080/search?filters=x',
 };
 
 const makeMessage = (overrides: Partial<Message> = {}): Message => ({
@@ -82,7 +83,7 @@ describe('buildSlackErrorPayload', () => {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: '*<http://app:8080/search/1 | 🚨 Alert for "errors">*',
+        text: '*<http://app:8080/search?filters=x | 🚨 Alert for "errors">*',
       },
     });
   });
@@ -151,25 +152,32 @@ describe('buildSlackErrorPayload', () => {
     );
   });
 
-  it('adds a group-scoped search link to the context when available', () => {
+  it('points the title at the group-scoped row list', () => {
+    expect(blocksOf(makeMessage())[0].text.text).toContain(
+      'http://app:8080/search?filters=x',
+    );
+  });
+
+  it('keeps the alert own view reachable from the footer', () => {
     const blocks = blocksOf(
       makeMessage({
         parts: {
           ...baseParts,
-          groupSearchLink: 'http://app:8080/search/1?x=1',
+          originLink: {
+            url: 'http://app:8080/dashboards/d1',
+            label: 'View chart',
+          },
         },
       }),
     );
 
     expect(allText(blocks)).toContain(
-      '<http://app:8080/search/1?x=1 | View this group in HyperDX>',
+      '<http://app:8080/dashboards/d1 | View chart>',
     );
   });
 
-  it('omits the group link when there is none', () => {
-    expect(allText(blocksOf(makeMessage()))).not.toContain(
-      'View this group in HyperDX',
-    );
+  it('omits the footer link when the title already goes there', () => {
+    expect(allText(blocksOf(makeMessage()))).not.toContain('View chart');
   });
 
   describe('resolved alerts', () => {

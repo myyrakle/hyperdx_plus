@@ -53,8 +53,16 @@ export type AlertMessageParts = {
   group: AlertMessageField[];
   /** Fields pulled from a representative row of the group. */
   sampleFields: AlertMessageField[];
-  /** Search link scoped to this group. Absent for non-grouped alerts. */
-  groupSearchLink?: string;
+  /**
+   * Where the title points: the row list scoped to the group that fired, or the
+   * alert's own view when there is no group filter to apply.
+   */
+  titleLink: string;
+  /**
+   * The alert's own chart/search view. Only set when it differs from
+   * `titleLink`, so the footer never repeats the title's destination.
+   */
+  originLink?: { url: string; label: string };
 };
 
 /**

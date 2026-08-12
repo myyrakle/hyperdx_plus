@@ -397,16 +397,28 @@ describe('renderAlertTemplate group scoping', () => {
       expect(sampleRowQuery).toContain("toString(ServiceName) = 'api'");
     });
 
-    it('links to the group-scoped search', async () => {
+    it('points the title at the group-scoped row list', async () => {
       await renderWith({
         view: viewWithChannel(),
         clickhouseClient: makeClient(),
         teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
       });
 
-      expect(JSON.stringify(lastSlackBlocks())).toContain(
-        'View this group in HyperDX',
-      );
+      const titleText = lastSlackBlocks()[0].text.text;
+      expect(titleText).toContain('/search?');
+      expect(titleText).toContain('filters=');
+    });
+
+    it('keeps the full saved search reachable from the footer', async () => {
+      await renderWith({
+        view: viewWithChannel(),
+        clickhouseClient: makeClient(),
+        teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
+      });
+
+      const blocks = lastSlackBlocks();
+      const context = blocks[blocks.length - 1];
+      expect(context.elements[0].text).toContain('View search');
     });
 
     it('does not query for a representative row when no display fields are set', async () => {
@@ -443,6 +455,134 @@ describe('renderAlertTemplate group scoping', () => {
       expect(blocks).toHaveLength(1);
       expect(JSON.stringify(blocks)).not.toContain('connection refused');
     });
+  });
+});
+
+describe('renderAlertTemplate for tile alerts', () => {
+  const webhookId = '507f1f77bcf86cd799439011';
+  const errorWebhook = {
+    _id: { toString: () => webhookId },
+    name: 'errors',
+    service: WebhookService.SlackError,
+    url: 'https://hooks.slack.com/services/T0/B0/XXXX',
+  };
+
+  const groupedTile = makeTile({ id: 'test-tile-id' });
+  groupedTile.config = {
+    ...(groupedTile.config as any),
+    source: 'fake-source-id',
+    where: 'StatusCode:Error',
+    whereLanguage: 'lucene',
+    groupBy: [{ valueExpression: 'StatusMessage' }],
+    filters: [{ type: 'sql', condition: 'ServiceName IS NOT NULL' }],
+  } as any;
+
+  const tileView = (
+    overrides: Partial<AlertMessageTemplateDefaultView> = {},
+  ): AlertMessageTemplateDefaultView => {
+    const view = makeTileView({ group: 'StatusMessage:boom' });
+    return {
+      ...view,
+      alert: {
+        ...view.alert,
+        channel: { type: 'webhook', webhookId },
+        displayFields: "SpanAttributes['exception.message']",
+      },
+      dashboard: { ...(view.dashboard as any), tiles: [groupedTile] },
+      source: makeSearchView().source,
+      attributesFlat: { StatusMessage: 'boom' },
+      isGroupedAlert: true,
+      ...overrides,
+    } as AlertMessageTemplateDefaultView;
+  };
+
+  const makeClient = (sampleRow?: Record<string, unknown>) =>
+    ({
+      query: jest.fn().mockResolvedValue({
+        json: jest
+          .fn()
+          .mockResolvedValue({ data: sampleRow ? [sampleRow] : [] }),
+        text: jest.fn().mockResolvedValue(sampleLogsCsv),
+      }),
+    }) as any;
+
+  const renderTile = (clickhouseClient: any, state = AlertState.ALERT) =>
+    renderAlertTemplate({
+      alertProvider,
+      clickhouseClient,
+      metadata: mockMetadata,
+      state,
+      template: null,
+      title: 'Test Alert Title',
+      view: tileView(),
+      teamWebhooksById: new Map([[webhookId, errorWebhook as any]]),
+    });
+
+  const lastPayload = () => {
+    const calls = (slack.postMessageToWebhook as jest.Mock).mock.calls;
+    return calls[calls.length - 1][1];
+  };
+  const lastBlocks = () => lastPayload().attachments[0].blocks;
+
+  beforeEach(() => {
+    (slack.postMessageToWebhook as jest.Mock).mockClear();
+  });
+
+  it('renders the structured layout rather than the plain fallback', async () => {
+    await renderTile(makeClient());
+
+    // The fallback is a single section; the structured layout ends in a context.
+    const blocks = lastBlocks();
+    expect(blocks.length).toBeGreaterThan(1);
+    expect(blocks[blocks.length - 1].type).toBe('context');
+  });
+
+  it('colours the attachment by state', async () => {
+    await renderTile(makeClient());
+    expect(lastPayload().attachments[0].color).toBe('danger');
+
+    await renderTile(makeClient(), AlertState.OK);
+    expect(lastPayload().attachments[0].color).toBe('good');
+  });
+
+  it('shows the group value from the tile group-by', async () => {
+    await renderTile(makeClient());
+
+    expect(JSON.stringify(lastBlocks())).toContain('boom');
+  });
+
+  it('includes the display fields of a representative row', async () => {
+    await renderTile(
+      makeClient({
+        "SpanAttributes['exception.message']": 'connection refused',
+      }),
+    );
+
+    expect(JSON.stringify(lastBlocks())).toContain('connection refused');
+  });
+
+  it('scopes the representative-row query to the group', async () => {
+    const clickhouseClient = makeClient({ StatusMessage: 'boom' });
+
+    await renderTile(clickhouseClient);
+
+    const sql = clickhouseClient.query.mock.calls.map((c: any[]) => c[0].query);
+    expect(sql.join('\n')).toContain("toString(StatusMessage) = 'boom'");
+  });
+
+  it('points the title at the group-filtered row list', async () => {
+    await renderTile(makeClient());
+
+    const titleText = lastBlocks()[0].text.text;
+    expect(titleText).toContain('/search?');
+    expect(titleText).toContain('filters=');
+  });
+
+  it('keeps the dashboard chart reachable from the footer', async () => {
+    await renderTile(makeClient());
+
+    const context = lastBlocks()[lastBlocks().length - 1];
+    expect(context.elements[0].text).toContain('/dashboards/');
   });
 });
 

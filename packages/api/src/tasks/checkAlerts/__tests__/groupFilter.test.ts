@@ -35,6 +35,46 @@ describe('zipGroupValues', () => {
   it('returns undefined on a count mismatch', () => {
     expect(zipGroupValues('a, b', { x: '1' })).toBeUndefined();
   });
+
+  describe('tile group-by, which is a select list rather than a string', () => {
+    it('reads each entry as an expression', () => {
+      expect(
+        zipGroupValues(
+          [{ valueExpression: 'ServiceName' }, { valueExpression: 'SpanName' }],
+          { a: 'api', b: 'GET /x' },
+        ),
+      ).toEqual([
+        ['ServiceName', 'api'],
+        ['SpanName', 'GET /x'],
+      ]);
+    });
+
+    it('filters on the expression, not the alias', () => {
+      // The alias only exists in the SELECT list; a WHERE clause at the same
+      // level cannot reference it.
+      expect(
+        zipGroupValues(
+          [{ valueExpression: "SpanAttributes['k']", alias: 'k' }],
+          { k: 'v' },
+        ),
+      ).toEqual([["SpanAttributes['k']", 'v']]);
+    });
+
+    it('returns undefined for an empty list', () => {
+      expect(zipGroupValues([], { a: '1' })).toBeUndefined();
+    });
+
+    it('skips entries with a blank expression', () => {
+      expect(
+        zipGroupValues(
+          [{ valueExpression: 'ServiceName' }, { valueExpression: '' }],
+          {
+            a: 'api',
+          },
+        ),
+      ).toEqual([['ServiceName', 'api']]);
+    });
+  });
 });
 
 describe('buildGroupFilterCondition', () => {
