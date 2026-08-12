@@ -15,11 +15,16 @@ import { InputControlled } from '@/components/InputControlled';
 import { SQLInlineEditorControlled } from '@/components/SQLEditor/SQLInlineEditor';
 
 /**
- * Repeatable expression/label rows for an alert's display fields.
+ * What an alert pulls from a representative row of the group that fired.
  *
- * One row per value so each expression is editable on its own, rather than
- * hidden inside one comma-separated string. The label is optional: left blank,
- * the notification derives one from the expression.
+ * The named slots exist because the notification's layout is fixed: the error
+ * message reads as a short field and the stack trace always gets a full-width
+ * code block. Asking for them by role means the rendering is predictable and the
+ * form can say what each value is for, instead of accepting a list of
+ * expressions whose purpose only the author knows.
+ *
+ * Extras cover everything else — `db.query.text`, a request id — and are labelled
+ * by the user, or by their expression when left blank.
  */
 export const AlertDisplayFields = <T extends FieldValues>({
   control,
@@ -27,21 +32,49 @@ export const AlertDisplayFields = <T extends FieldValues>({
   tableConnection,
 }: {
   control: Control<T>;
-  name: ArrayPath<T>;
+  /** Path to the display-fields object, e.g. `displayFields` or `alert.displayFields`. */
+  name: string;
   tableConnection?: TableConnection;
 }) => {
   const { t } = useTranslation('alerts');
-  const { fields, append, remove } = useFieldArray<T>({ control, name });
+  const { fields, append, remove } = useFieldArray<T>({
+    control,
+    name: `${name}.extra` as ArrayPath<T>,
+  });
 
   return (
     <>
+      {(
+        [
+          ['errorMessage', t('displayFields.errorMessage')],
+          ['stacktrace', t('displayFields.stacktrace')],
+        ] as const
+      ).map(([slot, label]) => (
+        <Flex key={slot} align="center" gap="xs" mb={4}>
+          <Text size="xxs" opacity={0.5} style={{ minWidth: 90 }}>
+            {label}
+          </Text>
+          <SQLInlineEditorControlled
+            tableConnection={tableConnection}
+            control={control}
+            name={`${name}.${slot}` as Path<T>}
+            placeholder={t(`displayFields.${slot}Placeholder`)}
+            disableKeywordAutocomplete
+            size="xs"
+          />
+        </Flex>
+      ))}
+
+      <Text size="xxs" opacity={0.5} mt="xs" mb={4}>
+        {t('displayFields.extra')}
+      </Text>
       {fields.map((field, index) => (
         <Flex key={field.id} align="center" gap="xs" mb={4}>
           <SQLInlineEditorControlled
             tableConnection={tableConnection}
             control={control}
-            name={`${name}.${index}.valueExpression` as Path<T>}
-            placeholder={t('displayFields.expressionPlaceholder')}
+            name={`${name}.extra.${index}.valueExpression` as Path<T>}
+            placeholder={t('displayFields.extraPlaceholder')}
             disableKeywordAutocomplete
             size="xs"
           />
@@ -50,7 +83,7 @@ export const AlertDisplayFields = <T extends FieldValues>({
           </Text>
           <InputControlled
             control={control}
-            name={`${name}.${index}.alias` as Path<T>}
+            name={`${name}.extra.${index}.alias` as Path<T>}
             data-testid={`display-field-alias-${index}`}
             placeholder={t('displayFields.aliasPlaceholder')}
             size="xs"

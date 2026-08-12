@@ -1,9 +1,14 @@
 export const alerts = {
   displayFields: {
+    errorMessage: 'error message',
+    errorMessagePlaceholder: 'StatusMessage',
+    stacktrace: 'stack trace',
+    stacktracePlaceholder: "SpanAttributes['code.stacktrace']",
+    extra: 'extra fields',
+    extraPlaceholder: "SpanAttributes['db.query.text']",
     as: 'AS',
     add: 'Add field',
     remove: 'Remove field',
-    expressionPlaceholder: "SpanAttributes['code.stacktrace']",
     aliasPlaceholder: 'label (optional)',
   },
   note: {

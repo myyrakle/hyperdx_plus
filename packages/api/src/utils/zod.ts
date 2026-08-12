@@ -675,13 +675,19 @@ export const alertSchema = z
     // Values pulled from a representative row and rendered as labelled fields
     // by the slack_error webhook service. Applies to both alert sources.
     displayFields: z
-      .array(
-        z.object({
-          valueExpression: z.string().max(2048),
-          alias: z.string().max(128).optional(),
-        }),
-      )
-      .max(20)
+      .object({
+        errorMessage: z.string().max(2048).optional(),
+        stacktrace: z.string().max(2048).optional(),
+        extra: z
+          .array(
+            z.object({
+              valueExpression: z.string().max(2048),
+              alias: z.string().max(128).optional(),
+            }),
+          )
+          .max(20)
+          .optional(),
+      })
       .optional(),
     // Broadcast mention prepended when the alert fires, rendered only by the
     // slack_error webhook service.

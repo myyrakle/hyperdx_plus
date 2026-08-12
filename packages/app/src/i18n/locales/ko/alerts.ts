@@ -3,10 +3,15 @@ import type { DeepPartial } from '@/i18n/types';
 
 export const alerts = {
   displayFields: {
+    errorMessage: '오류 메시지',
+    errorMessagePlaceholder: 'StatusMessage',
+    stacktrace: '스택트레이스',
+    stacktracePlaceholder: "SpanAttributes['code.stacktrace']",
+    extra: '추가 필드',
+    extraPlaceholder: "SpanAttributes['db.query.text']",
     as: 'AS',
     add: '필드 추가',
     remove: '필드 삭제',
-    expressionPlaceholder: "SpanAttributes['code.stacktrace']",
     aliasPlaceholder: '라벨 (선택)',
   },
   note: {

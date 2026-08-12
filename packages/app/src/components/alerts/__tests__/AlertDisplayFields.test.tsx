@@ -12,9 +12,13 @@ jest.mock('@/components/SQLEditor/SQLInlineEditor', () => ({
   ),
 }));
 
-type Form = {
-  displayFields?: { valueExpression: string; alias?: string }[];
+type Fields = {
+  errorMessage?: string;
+  stacktrace?: string;
+  extra?: { valueExpression: string; alias?: string }[];
 };
+
+type Form = { displayFields?: Fields };
 
 const captured: { value?: Form } = {};
 
@@ -41,7 +45,7 @@ const renderFields = (defaultValues?: Form) =>
     </MantineProvider>,
   );
 
-const rowEditors = () =>
+const editorNames = () =>
   screen
     .queryAllByTestId('sql-inline-editor')
     .map(el => el.getAttribute('data-name'));
@@ -51,76 +55,98 @@ beforeEach(() => {
 });
 
 describe('AlertDisplayFields', () => {
-  it('starts with no rows so nothing is queried by default', () => {
-    renderFields();
+  describe('named slots', () => {
+    it('always offers the error message and stack trace slots', () => {
+      renderFields();
 
-    expect(rowEditors()).toEqual([]);
-  });
-
-  it('renders one expression editor per configured field', () => {
-    renderFields({
-      displayFields: [
-        { valueExpression: 'StatusMessage' },
-        { valueExpression: "SpanAttributes['code.stacktrace']" },
-      ],
+      expect(editorNames()).toEqual([
+        'displayFields.errorMessage',
+        'displayFields.stacktrace',
+      ]);
     });
 
-    expect(rowEditors()).toEqual([
-      'displayFields.0.valueExpression',
-      'displayFields.1.valueExpression',
-    ]);
+    it('labels each slot by its role, not by the expression', () => {
+      renderFields();
+
+      expect(screen.getByText('error message')).toBeInTheDocument();
+      expect(screen.getByText('stack trace')).toBeInTheDocument();
+    });
+
+    it('submits the slots as named values', async () => {
+      const user = userEvent.setup();
+      renderFields({
+        displayFields: {
+          errorMessage: 'StatusMessage',
+          stacktrace: "SpanAttributes['code.stacktrace']",
+        },
+      });
+
+      await user.click(screen.getByText('save'));
+
+      expect(captured.value?.displayFields).toMatchObject({
+        errorMessage: 'StatusMessage',
+        stacktrace: "SpanAttributes['code.stacktrace']",
+      });
+    });
   });
 
-  it('gives each row its own label input', () => {
-    renderFields({ displayFields: [{ valueExpression: 'StatusMessage' }] });
+  describe('extra fields', () => {
+    it('starts with none', () => {
+      renderFields();
 
-    expect(screen.getByTestId('display-field-alias-0')).toBeInTheDocument();
-  });
+      expect(
+        screen.queryByTestId('display-field-alias-0'),
+      ).not.toBeInTheDocument();
+    });
 
-  it('adds a row on demand', async () => {
-    const user = userEvent.setup();
-    renderFields();
+    it('adds a row with its own expression and label inputs', async () => {
+      const user = userEvent.setup();
+      renderFields();
 
-    await user.click(screen.getByTestId('add-display-field'));
+      await user.click(screen.getByTestId('add-display-field'));
 
-    expect(rowEditors()).toEqual(['displayFields.0.valueExpression']);
-  });
+      expect(editorNames()).toContain('displayFields.extra.0.valueExpression');
+      expect(screen.getByTestId('display-field-alias-0')).toBeInTheDocument();
+    });
 
-  it('removes the row the button belongs to, not another one', async () => {
-    const user = userEvent.setup();
-    renderFields({
-      displayFields: [
+    it('removes the row the button belongs to, not another one', async () => {
+      const user = userEvent.setup();
+      renderFields({
+        displayFields: {
+          extra: [
+            { valueExpression: 'a' },
+            { valueExpression: 'b' },
+            { valueExpression: 'c' },
+          ],
+        },
+      });
+
+      await user.click(screen.getByTestId('remove-display-field-1'));
+      await user.click(screen.getByText('save'));
+
+      // useFieldArray re-indexes the remaining rows, so the surviving values —
+      // not the field paths — are what proves the right row went.
+      expect(captured.value?.displayFields?.extra).toEqual([
         { valueExpression: 'a' },
-        { valueExpression: 'b' },
         { valueExpression: 'c' },
-      ],
+      ]);
     });
 
-    await user.click(screen.getByTestId('remove-display-field-1'));
-    await user.click(screen.getByText('save'));
+    it('keeps extras separate from the named slots', async () => {
+      const user = userEvent.setup();
+      renderFields({
+        displayFields: {
+          errorMessage: 'StatusMessage',
+          extra: [{ valueExpression: 'db.query.text', alias: 'Query' }],
+        },
+      });
 
-    // useFieldArray re-indexes the remaining rows, so the surviving values —
-    // not the field paths — are what proves the right row went.
-    expect(captured.value?.displayFields).toEqual([
-      { valueExpression: 'a' },
-      { valueExpression: 'c' },
-    ]);
-  });
+      await user.click(screen.getByText('save'));
 
-  it('submits the rows as an array, preserving order', async () => {
-    const user = userEvent.setup();
-    renderFields({
-      displayFields: [
-        { valueExpression: 'StatusMessage', alias: '오류 내용' },
-        { valueExpression: "SpanAttributes['code.stacktrace']" },
-      ],
+      expect(captured.value?.displayFields).toEqual({
+        errorMessage: 'StatusMessage',
+        extra: [{ valueExpression: 'db.query.text', alias: 'Query' }],
+      });
     });
-
-    await user.click(screen.getByText('save'));
-
-    expect(captured.value?.displayFields).toEqual([
-      { valueExpression: 'StatusMessage', alias: '오류 내용' },
-      { valueExpression: "SpanAttributes['code.stacktrace']" },
-    ]);
   });
 });

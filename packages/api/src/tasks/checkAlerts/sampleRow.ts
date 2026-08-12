@@ -3,7 +3,7 @@ import { ClickhouseClient } from '@hyperdx/common-utils/dist/clickhouse/node';
 import { Metadata } from '@hyperdx/common-utils/dist/core/metadata';
 import { renderChartConfig } from '@hyperdx/common-utils/dist/core/renderChartConfig';
 import {
-  AlertDisplayField,
+  AlertDisplayFields,
   BuilderChartConfigWithOptDateRange,
   ChartConfigWithOptDateRange,
   DisplayType,
@@ -16,7 +16,6 @@ import { ISource } from '@/models/source';
 import {
   AlertMessageField,
   formatFieldLabel,
-  makeMessageField,
 } from '@/tasks/checkAlerts/message';
 import { SearchLinkQuery } from '@/tasks/checkAlerts/searchLink';
 import logger from '@/utils/logger';
@@ -42,7 +41,7 @@ export const fetchGroupSampleFields = async ({
 }: {
   aliasWith?: BuilderChartConfigWithOptDateRange['with'];
   clickhouseClient: ClickhouseClient;
-  displayFields?: AlertDisplayField[];
+  displayFields?: AlertDisplayFields;
   endTime: Date;
   groupFilterCondition?: string;
   metadata: Metadata;
@@ -51,11 +50,39 @@ export const fetchGroupSampleFields = async ({
   source: ISource;
   startTime: Date;
 }): Promise<AlertMessageField[]> => {
-  // A blank expression is a half-filled row in the form, not something to query.
-  const fields = (displayFields ?? []).filter(field =>
-    field.valueExpression.trim(),
-  );
-  if (fields.length === 0) {
+  // Named slots have fixed labels and a fixed layout; extras are labelled by the
+  // user or by their expression. A blank expression is a half-filled form row,
+  // not something to query.
+  const slots: Array<{ expression: string; label: string; long: boolean }> = [
+    ...(displayFields?.errorMessage?.trim()
+      ? [
+          {
+            expression: displayFields.errorMessage.trim(),
+            label: 'Error message',
+            long: false,
+          },
+        ]
+      : []),
+    ...(displayFields?.extra ?? [])
+      .filter(field => field.valueExpression.trim())
+      .map(field => ({
+        expression: field.valueExpression.trim(),
+        label:
+          field.alias?.trim() || formatFieldLabel(field.valueExpression.trim()),
+        long: false,
+      })),
+    // Last, and always full width: a stack trace is unreadable in two columns.
+    ...(displayFields?.stacktrace?.trim()
+      ? [
+          {
+            expression: displayFields.stacktrace.trim(),
+            label: 'Stack trace',
+            long: true,
+          },
+        ]
+      : []),
+  ];
+  if (slots.length === 0) {
     return [];
   }
 
@@ -75,8 +102,8 @@ export const fetchGroupSampleFields = async ({
     displayType: DisplayType.Search,
     dateRange: [startTime, endTime],
     from: source.from,
-    select: fields.map((field, i) => ({
-      valueExpression: field.valueExpression.trim(),
+    select: slots.map((slot, i) => ({
+      valueExpression: slot.expression,
       alias: aliasOf(i),
     })),
     where: query.where ?? '',
@@ -123,15 +150,15 @@ export const fetchGroupSampleFields = async ({
       return [];
     }
 
-    return fields.map((field, i) => {
+    return slots.map((slot, i) => {
       const value = row[aliasOf(i)];
-      return makeMessageField(
-        // The configured label wins; without one, derive it from the expression.
-        field.alias?.trim() || formatFieldLabel(field.valueExpression.trim()),
+      return {
+        label: slot.label,
         // A column the query did not return still gets a field, so a mismatch is
         // visible in the notification rather than silently dropped.
-        value == null ? '' : `${value}`,
-      );
+        value: value == null ? '' : `${value}`,
+        long: slot.long,
+      };
     });
   } catch (e) {
     logger.error(

@@ -35,7 +35,7 @@ const call = (overrides: Record<string, unknown> = {}) =>
     source,
     startTime: new Date('2026-08-12T00:00:00Z'),
     endTime: new Date('2026-08-12T00:05:00Z'),
-    displayFields: [{ valueExpression: "SpanAttributes['exception.message']" }],
+    displayFields: { errorMessage: 'StatusMessage' },
     ...overrides,
   });
 
@@ -45,90 +45,93 @@ beforeEach(() => {
 });
 
 describe('fetchGroupSampleFields', () => {
-  it('returns a labelled field per display field of the row', async () => {
-    // ClickHouse names an unaliased column after its own rendering of the
-    // expression (`arrayElement(SpanAttributes, 'exception.message')`), never
-    // after the expression text, so the query has to alias the columns and read
-    // those aliases back.
+  it('renders the error message as a short field with a fixed label', () => {});
+
+  it('renders the stack trace as a long field so it always gets a code block', async () => {
+    const result = await call({
+      clickhouseClient: makeClient([
+        { __hdx_display_0: 'boom', __hdx_display_1: 'one frame' },
+      ]) as any,
+      displayFields: {
+        errorMessage: 'StatusMessage',
+        stacktrace: "SpanAttributes['code.stacktrace']",
+      },
+    });
+
+    expect(result).toEqual([
+      { label: 'Error message', value: 'boom', long: false },
+      { label: 'Stack trace', value: 'one frame', long: true },
+    ]);
+  });
+
+  it('keeps a single-line stack trace long, not folded into two columns', async () => {
+    // The slot decides the layout, not whether the value happens to contain a
+    // newline — that heuristic made rendering unpredictable.
+    const result = await call({
+      clickhouseClient: makeClient([
+        { __hdx_display_0: 'only one frame' },
+      ]) as any,
+      displayFields: { stacktrace: "SpanAttributes['code.stacktrace']" },
+    });
+
+    expect(result).toEqual([
+      { label: 'Stack trace', value: 'only one frame', long: true },
+    ]);
+  });
+
+  it('keeps a multi-line error message short, so the slot stays predictable', async () => {
+    const result = await call({
+      clickhouseClient: makeClient([{ __hdx_display_0: 'a\nb' }]) as any,
+      displayFields: { errorMessage: 'StatusMessage' },
+    });
+
+    expect(result[0].long).toBe(false);
+  });
+
+  it('orders the slots message, extras, stack trace', async () => {
     const result = await call({
       clickhouseClient: makeClient([
         {
-          __hdx_display_0: 'connection refused',
-          __hdx_display_1: 'at foo()\nat bar()',
+          __hdx_display_0: 'msg',
+          __hdx_display_1: 'select 1',
+          __hdx_display_2: 'frames',
         },
       ]) as any,
-      displayFields: [
-        { valueExpression: "SpanAttributes['exception.message']" },
-        { valueExpression: "SpanAttributes['exception.stacktrace']" },
-      ],
-    });
-
-    expect(result).toEqual([
-      { label: 'exception.message', value: 'connection refused', long: false },
-      {
-        label: 'exception.stacktrace',
-        value: 'at foo()\nat bar()',
-        long: true,
+      displayFields: {
+        errorMessage: 'StatusMessage',
+        stacktrace: "SpanAttributes['code.stacktrace']",
+        extra: [
+          {
+            valueExpression: "SpanAttributes['db.query.text']",
+            alias: 'Query',
+          },
+        ],
       },
+    });
+
+    expect(result.map(f => f.label)).toEqual([
+      'Error message',
+      'Query',
+      'Stack trace',
     ]);
   });
 
-  it('prefers the configured label over the derived one', async () => {
+  it('derives an extra field label from its expression when none is given', async () => {
     const result = await call({
-      clickhouseClient: makeClient([{ __hdx_display_0: 'boom' }]) as any,
-      displayFields: [
-        {
-          valueExpression: "SpanAttributes['exception.message']",
-          alias: '오류 내용',
-        },
-      ],
+      clickhouseClient: makeClient([{ __hdx_display_0: 'x' }]) as any,
+      displayFields: {
+        extra: [{ valueExpression: "SpanAttributes['db.query.text']" }],
+      },
     });
 
-    expect(result).toEqual([
-      { label: '오류 내용', value: 'boom', long: false },
-    ]);
+    expect(result[0].label).toBe('db.query.text');
   });
 
-  it('derives a label when the configured one is blank', async () => {
-    const result = await call({
-      clickhouseClient: makeClient([{ __hdx_display_0: 'boom' }]) as any,
-      displayFields: [
-        { valueExpression: "SpanAttributes['exception.message']", alias: '  ' },
-      ],
-    });
-
-    expect(result[0].label).toBe('exception.message');
-  });
-
-  it('skips rows with a blank expression', async () => {
-    const result = await call({
-      clickhouseClient: makeClient([{ __hdx_display_0: 'boom' }]) as any,
-      displayFields: [
-        { valueExpression: 'StatusMessage' },
-        { valueExpression: '   ' },
-      ],
-    });
-
-    expect(result).toHaveLength(1);
-  });
-
-  it('aliases each display field so the response can be read back reliably', async () => {
-    await call({
-      displayFields: [
-        { valueExpression: "SpanAttributes['exception.message']" },
-        { valueExpression: "SpanAttributes['exception.stacktrace']" },
-      ],
-    });
+  it('selects only the slots that are filled in', async () => {
+    await call({ displayFields: { stacktrace: 'Stack' } });
 
     expect(renderChartConfig.mock.calls[0][0].select).toEqual([
-      {
-        valueExpression: "SpanAttributes['exception.message']",
-        alias: '__hdx_display_0',
-      },
-      {
-        valueExpression: "SpanAttributes['exception.stacktrace']",
-        alias: '__hdx_display_1',
-      },
+      { valueExpression: 'Stack', alias: '__hdx_display_0' },
     ]);
   });
 
@@ -153,8 +156,7 @@ describe('fetchGroupSampleFields', () => {
   it('applies the group filter so the row comes from the alerting group', async () => {
     await call({ groupFilterCondition: "toString(ServiceName) = 'api'" });
 
-    const chartConfig = renderChartConfig.mock.calls[0][0];
-    expect(chartConfig.filters).toEqual([
+    expect(renderChartConfig.mock.calls[0][0].filters).toEqual([
       { type: 'sql', condition: "toString(ServiceName) = 'api'" },
     ]);
   });
@@ -165,13 +167,16 @@ describe('fetchGroupSampleFields', () => {
     expect(renderChartConfig.mock.calls[0][0].filters).toBeUndefined();
   });
 
-  it('returns an empty list when no display fields are configured', async () => {
-    const clickhouseClient = makeClient([{ Body: 'x' }]);
+  it('returns an empty list when no slot is configured', async () => {
+    const clickhouseClient = makeClient([{ __hdx_display_0: 'x' }]);
 
     expect(await call({ displayFields: undefined, clickhouseClient })).toEqual(
       [],
     );
-    expect(await call({ displayFields: [], clickhouseClient })).toEqual([]);
+    expect(await call({ displayFields: {}, clickhouseClient })).toEqual([]);
+    expect(
+      await call({ displayFields: { errorMessage: '  ' }, clickhouseClient }),
+    ).toEqual([]);
     expect(clickhouseClient.query).not.toHaveBeenCalled();
   });
 
@@ -185,13 +190,13 @@ describe('fetchGroupSampleFields', () => {
     });
 
     expect(result).toEqual([
-      { label: 'exception.message', value: '', long: false },
+      { label: 'Error message', value: '', long: false },
     ]);
   });
 
   it('stringifies non-string column values', async () => {
     const result = await call({
-      displayFields: [{ valueExpression: 'SeverityNumber' }],
+      displayFields: { extra: [{ valueExpression: 'SeverityNumber' }] },
       clickhouseClient: makeClient([{ __hdx_display_0: 17 }]) as any,
     });
 

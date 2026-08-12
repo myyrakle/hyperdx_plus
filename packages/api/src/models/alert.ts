@@ -77,7 +77,11 @@ export interface IAlert {
    * as labelled fields in the notification.
    * Only the `slack_error` webhook service renders these.
    */
-  displayFields?: { valueExpression: string; alias?: string }[];
+  displayFields?: {
+    errorMessage?: string;
+    stacktrace?: string;
+    extra?: { valueExpression: string; alias?: string }[];
+  };
   /**
    * Broadcast mention to prepend when the alert fires. Resolutions never carry
    * one. Only the `slack_error` webhook service renders this.
@@ -195,13 +199,21 @@ const AlertSchema = new Schema<IAlert>(
       required: false,
     },
     displayFields: {
-      type: [
-        {
-          _id: false,
-          valueExpression: { type: String, required: true },
-          alias: { type: String, required: false },
+      type: {
+        _id: false,
+        errorMessage: { type: String, required: false },
+        stacktrace: { type: String, required: false },
+        extra: {
+          type: [
+            {
+              _id: false,
+              valueExpression: { type: String, required: true },
+              alias: { type: String, required: false },
+            },
+          ],
+          required: false,
         },
-      ],
+      },
       required: false,
     },
     mention: {

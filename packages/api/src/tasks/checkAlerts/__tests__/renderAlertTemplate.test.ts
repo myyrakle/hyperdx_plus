@@ -368,9 +368,7 @@ describe('renderAlertTemplate group scoping', () => {
           ...view,
           alert: {
             ...view.alert,
-            displayFields: [
-              { valueExpression: "SpanAttributes['exception.message']" },
-            ],
+            displayFields: { errorMessage: 'StatusMessage' },
           },
         },
         clickhouseClient: makeClient({ __hdx_display_0: 'connection refused' }),
@@ -389,7 +387,7 @@ describe('renderAlertTemplate group scoping', () => {
           ...view,
           alert: {
             ...view.alert,
-            displayFields: [{ valueExpression: 'ServiceName' }],
+            displayFields: { errorMessage: 'ServiceName' },
           },
         },
         clickhouseClient,
@@ -443,9 +441,7 @@ describe('renderAlertTemplate group scoping', () => {
           ...view,
           alert: {
             ...view.alert,
-            displayFields: [
-              { valueExpression: "SpanAttributes['exception.message']" },
-            ],
+            displayFields: { errorMessage: 'StatusMessage' },
           },
         },
         clickhouseClient: makeClient({ __hdx_display_0: 'connection refused' }),
@@ -487,9 +483,7 @@ describe('renderAlertTemplate for tile alerts', () => {
       alert: {
         ...view.alert,
         channel: { type: 'webhook', webhookId },
-        displayFields: [
-          { valueExpression: "SpanAttributes['exception.message']" },
-        ],
+        displayFields: { errorMessage: 'StatusMessage' },
       },
       dashboard: { ...(view.dashboard as any), tiles: [groupedTile] },
       source: makeSearchView().source,
@@ -628,9 +622,7 @@ describe('renderAlertTemplate for tile alerts', () => {
       .map((c: any[]) => c[0].query)
       .find((sql: string) => sql.includes('__hdx_display_0'));
 
-    expect(sampleRowSql).toContain(
-      'SpanAttributes[\'exception.message\'] AS "__hdx_display_0"',
-    );
+    expect(sampleRowSql).toContain('StatusMessage AS "__hdx_display_0"');
   });
 
   it('points the title at the group-filtered row list', async () => {
