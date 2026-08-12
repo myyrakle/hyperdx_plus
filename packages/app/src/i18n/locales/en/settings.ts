@@ -167,6 +167,7 @@ export const settings = {
     createTitle: 'Create Webhook',
     serviceType: 'Service Type',
     serviceSlack: 'Slack',
+    serviceSlackError: 'Slack (Error)',
     serviceIncidentIo: 'incident.io',
     serviceGeneric: 'Generic',
     name: 'Webhook Name',

@@ -12,6 +12,7 @@ import {
   ChartConfigWithOptDateRange,
   DisplayType,
   isRangeThresholdType,
+  isSlackWebhookService,
   pickSampleWeightExpressionProps,
   SourceKind,
   WebhookService,
@@ -36,10 +37,25 @@ import {
   computeAliasWithClauses,
   doesExceedThreshold,
 } from '@/tasks/checkAlerts';
+import { resolveAlertQuerySpec } from '@/tasks/checkAlerts/alertQuerySpec';
+import {
+  buildGroupFilterCondition,
+  zipGroupValues,
+} from '@/tasks/checkAlerts/groupFilter';
+import {
+  AlertMessageParts,
+  formatFieldLabel,
+  makeMessageField,
+  Message,
+  renderMention,
+} from '@/tasks/checkAlerts/message';
 import {
   AlertProvider,
   PopulatedAlertChannel,
 } from '@/tasks/checkAlerts/providers';
+import { buildSlackErrorPayload } from '@/tasks/checkAlerts/providers/slackError';
+import { fetchGroupSampleFields } from '@/tasks/checkAlerts/sampleRow';
+import { buildGroupSearchLinkUrl } from '@/tasks/checkAlerts/searchLink';
 import { escapeJsonString, unflattenObject } from '@/tasks/util';
 import { truncateString } from '@/utils/common';
 import { getCounter, getHistogram } from '@/utils/instrumentation';
@@ -141,6 +157,12 @@ const zNotifyFnParams = z.object({
 export type AlertMessageTemplateDefaultView = {
   alert: AlertInput;
   attributes: ReturnType<typeof unflattenObject>;
+  /**
+   * The group values as returned by ClickHouse, flat and in SELECT order.
+   * `attributes` is the nested form for user templates; group-scoped queries and
+   * links need the ordering that nesting discards.
+   */
+  attributesFlat: Record<string, string>;
   dashboard?: IDashboard | null;
   endTime: Date;
   granularity: string;
@@ -151,16 +173,6 @@ export type AlertMessageTemplateDefaultView = {
   startTime: Date;
   value: number;
 };
-
-interface Message {
-  hdxLink: string;
-  title: string;
-  body: string;
-  state: AlertState;
-  startTime: number;
-  endTime: number;
-  eventId: string;
-}
 
 export const isAlertResolved = (state?: AlertState): boolean => {
   return state === AlertState.OK;
@@ -204,7 +216,9 @@ const notifyChannel = async ({
     case 'webhook': {
       const webhook = channel.channel;
       // TODO: migrate to use handleSendGenericWebhook so templates can be used
-      if (webhook.service === WebhookService.Slack) {
+      if (webhook.service === WebhookService.SlackError) {
+        await handleSendSlackErrorWebhook(webhook, message);
+      } else if (webhook.service === WebhookService.Slack) {
         await handleSendSlackWebhook(webhook, message);
       } else if (
         webhook.service === WebhookService.Generic ||
@@ -238,7 +252,7 @@ function validateWebhookUrl(
     throw new Error('Webhook URL is not set');
   }
 
-  if (webhook.service === WebhookService.Slack) {
+  if (isSlackWebhookService(webhook.service)) {
     // check that hostname ends in "slack.com"
     if (!isValidSlackUrl(webhook.url)) {
       const message = `Slack Webhook URL ${webhook.url} does not have hostname that ends in 'slack.com'`;
@@ -311,6 +325,35 @@ export const handleSendSlackWebhook = async (
   } finally {
     webhookDeliveryDuration.record(performance.now() - startedAt, {
       service: WebhookService.Slack,
+    });
+  }
+};
+
+export const handleSendSlackErrorWebhook = async (
+  webhook: IWebhook,
+  message: Message,
+) => {
+  const startedAt = performance.now();
+  try {
+    validateWebhookUrl(webhook);
+
+    await slack.postMessageToWebhook(
+      webhook.url,
+      buildSlackErrorPayload(message),
+    );
+    webhookDeliveryCounter.add(1, {
+      service: WebhookService.SlackError,
+      outcome: 'success',
+    });
+  } catch (e) {
+    webhookDeliveryCounter.add(1, {
+      service: WebhookService.SlackError,
+      outcome: 'error',
+    });
+    throw e;
+  } finally {
+    webhookDeliveryDuration.record(performance.now() - startedAt, {
+      service: WebhookService.SlackError,
     });
   }
 };
@@ -616,6 +659,110 @@ export const renderAlertTemplate = async ({
         ).trim()
       : translateExternalActionsToInternal(template ?? '');
 
+  const timeRangeMessage = `Time Range (UTC): [${formatDate(view.startTime, {
+    isUTC: true,
+  })} - ${formatDate(view.endTime, {
+    isUTC: true,
+  })})`;
+
+  // Where this alert's grouping and predicate actually live — the alert itself
+  // for saved searches, the tile config for dashboard tiles.
+  const querySpec = resolveAlertQuerySpec({ alert, dashboard, savedSearch });
+
+  // Restricts group-scoped queries and links to the group that fired.
+  // `undefined` for non-grouped alerts, which then behave exactly as before.
+  const groupFilterCondition = buildGroupFilterCondition(
+    querySpec?.groupBy,
+    view.attributesFlat,
+  );
+
+  /**
+   * Structured message parts for channels that render layout rather than a
+   * markdown blob. Memoized and only awaited by the `slack_error` branch, so
+   * an alert with no such channel issues no extra query at all.
+   */
+  const resolveParts = _.once(
+    async (): Promise<AlertMessageParts | undefined> => {
+      if (querySpec == null) {
+        return undefined;
+      }
+
+      const groupPairs = zipGroupValues(querySpec.groupBy, view.attributesFlat);
+      const groupFields = (groupPairs ?? []).map(([expression, groupValue]) =>
+        makeMessageField(formatFieldLabel(expression), groupValue),
+      );
+
+      let sampleFields: AlertMessageParts['sampleFields'] = [];
+      if (!isAlertResolved(state) && alert.displayFields && source != null) {
+        // Saved searches may alias columns in their select; tiles do not.
+        const aliasWith =
+          savedSearch != null
+            ? await computeAliasWithClauses(
+                savedSearch,
+                source,
+                metadata,
+              ).catch(() => undefined)
+            : undefined;
+        sampleFields = await fetchGroupSampleFields({
+          aliasWith: aliasWith ?? undefined,
+          clickhouseClient,
+          displayFields: alert.displayFields,
+          endTime,
+          groupFilterCondition,
+          metadata,
+          query: querySpec.query,
+          source,
+          startTime,
+        });
+      }
+
+      const originLink = buildAlertMessageTemplateHdxLink(alertProvider, view);
+      // The title takes people to the rows of the group that fired; the alert's
+      // own chart stays reachable from the footer.
+      const titleLink = groupFilterCondition
+        ? buildGroupSearchLinkUrl({
+            endTime,
+            frontendUrl: config.FRONTEND_URL,
+            groupFilterCondition,
+            query: querySpec.query,
+            sourceId: querySpec.sourceId,
+            startTime,
+          })
+        : originLink;
+
+      return {
+        metricValue: formatValueToMatchThreshold(value, alert.threshold),
+        thresholdText:
+          alert.source === AlertSource.SAVED_SEARCH
+            ? `lines found, which ${describeThresholdViolation(
+                alert.thresholdType,
+              )} the threshold of ${describeThreshold(alert)} lines`
+            : `${
+                doesExceedThreshold(alert, value)
+                  ? describeThresholdViolation(alert.thresholdType)
+                  : describeThresholdResolution(alert.thresholdType)
+              } ${describeThreshold(alert)}`,
+        totalCount: value,
+        timeRangeText: timeRangeMessage,
+        group: groupFields,
+        sampleFields,
+        titleLink,
+        // Resolutions never broadcast: waking people for good news trains them
+        // to mute the channel.
+        ...(!isAlertResolved(state) && {
+          mention: renderMention(alert.mention),
+        }),
+        ...(titleLink !== originLink && {
+          originLink: {
+            url: originLink,
+            label:
+              alert.source === AlertSource.TILE ? 'Open chart' : 'Open search',
+          },
+        }),
+      };
+    },
+  );
+
   const isMatchFn = function (shouldRender: boolean) {
     return function (
       targetKey: string,
@@ -672,6 +819,14 @@ export const renderAlertTemplate = async ({
           ...(view.isGroupedAlert && group ? { groupId: group } : {}),
         });
 
+        // Only the advanced Slack service renders structured parts, so the
+        // representative-row query is deferred until such a channel fires.
+        const parts =
+          channel.type === 'webhook' &&
+          channel.channel.service === WebhookService.SlackError
+            ? await resolveParts()
+            : undefined;
+
         await notifyChannel({
           channel,
           message: {
@@ -682,17 +837,13 @@ export const renderAlertTemplate = async ({
             startTime,
             endTime,
             eventId,
+            ...(parts && { parts }),
           },
         });
       }
     });
   };
 
-  const timeRangeMessage = `Time Range (UTC): [${formatDate(view.startTime, {
-    isUTC: true,
-  })} - ${formatDate(view.endTime, {
-    isUTC: true,
-  })})`;
   let rawTemplateBody;
 
   // For resolved alerts, use a simple message instead of fetching data
@@ -714,7 +865,6 @@ ${targetTemplate}`;
         `Expecting SourceKind 'trace' or 'log', got ${source.kind}`,
       );
     }
-    // TODO: show group + total count for group-by alerts
     // fetch sample logs
     const resolvedSelect =
       savedSearch.select || source.defaultTableSelectExpression || '';
@@ -731,6 +881,11 @@ ${targetTemplate}`;
       ...pickSampleWeightExpressionProps(source),
       timestampValueExpression: source.timestampValueExpression,
       orderBy: savedSearch.orderBy,
+      // Without this the sample rows come from the whole saved search rather
+      // than the group that fired, so a grouped alert shows unrelated rows.
+      ...(groupFilterCondition && {
+        filters: [{ type: 'sql', condition: groupFilterCondition }],
+      }),
       limit: {
         limit: 5,
         offset: 0,

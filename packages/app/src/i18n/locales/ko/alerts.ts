@@ -2,6 +2,18 @@ import type { alerts as englishAlerts } from '@/i18n/locales/en/alerts';
 import type { DeepPartial } from '@/i18n/types';
 
 export const alerts = {
+  displayFields: {
+    errorMessage: '오류 메시지',
+    errorMessagePlaceholder: 'StatusMessage',
+    stacktrace: '스택트레이스',
+    stacktracePlaceholder: "SpanAttributes['code.stacktrace']",
+    extra: '추가 필드',
+    extraPlaceholder: "SpanAttributes['db.query.text']",
+    as: 'AS',
+    add: '필드 추가',
+    remove: '필드 삭제',
+    aliasPlaceholder: '라벨 (선택)',
+  },
   note: {
     label: '메모',
     placeholder:
@@ -120,6 +132,13 @@ export const alerts = {
     windowOffset: '{{interval}} 구간마다',
     groupedBy: '그룹 기준',
     sqlColumns: 'SQL 컬럼',
+    mention: '발화 시 멘션',
+    mentionNone: '멘션 없음',
+    mentionHint:
+      '알림이 발화할 때만 붙습니다. 해소 시에는 멘션하지 않습니다. Slack (Error) 전용입니다.',
+    displayFields: '메시지에 포함할 필드',
+    displayFieldsHint:
+      '발화한 그룹의 가장 최근 행에서 값을 읽습니다. Slack (Error) 전용입니다.',
     sendTo: '전송 대상',
     groupedWarning:
       '주의: 이 임계값 타입과 “그룹 기준”을 함께 사용하면 특정 그룹에 데이터가 없는 구간에서는 알림이 발생하지 않습니다.',

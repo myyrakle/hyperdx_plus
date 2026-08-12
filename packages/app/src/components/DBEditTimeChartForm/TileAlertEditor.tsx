@@ -5,9 +5,11 @@ import {
   useWatch,
 } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import { TableConnection } from '@hyperdx/common-utils/dist/core/metadata';
 import {
   AlertThresholdType,
   isRangeThresholdType,
+  WebhookService,
 } from '@hyperdx/common-utils/dist/types';
 import {
   ActionIcon,
@@ -35,10 +37,12 @@ import api from '@/api';
 import { AlertNoteField } from '@/components/AlertNoteField';
 import { AlertChannelForm } from '@/components/Alerts';
 import { AckAlert } from '@/components/alerts/AckAlert';
+import { AlertDisplayFields } from '@/components/alerts/AlertDisplayFields';
 import { AlertHistoryCardList } from '@/components/alerts/AlertHistoryCards';
 import { AlertScheduleFields } from '@/components/AlertScheduleFields';
 import { ChartEditorFormState } from '@/components/ChartEditor/types';
 import { optionsToSelectData } from '@/utils';
+import { webhookSupportsDisplayFields } from '@/utils/alertDisplayFields';
 import {
   ALERT_CHANNEL_OPTIONS,
   intervalToMinutes,
@@ -54,6 +58,7 @@ export function TileAlertEditor({
   error,
   warning,
   tooltip,
+  tableConnection,
 }: {
   control: Control<ChartEditorFormState>;
   setValue: UseFormSetValue<ChartEditorFormState>;
@@ -62,11 +67,23 @@ export function TileAlertEditor({
   error?: string;
   warning?: string;
   tooltip?: string;
+  tableConnection?: TableConnection;
 }) {
   const { t } = useTranslation('charts');
   const [opened, { toggle }] = useDisclosure(true);
 
   const alertChannelType = useWatch({ control, name: 'alert.channel.type' });
+  const alertWebhookId = useWatch({
+    control,
+    name: 'alert.channel.webhookId',
+  });
+  const { data: webhooks } = api.useWebhooks(Object.values(WebhookService));
+  // Only the error-oriented Slack service renders display fields, so the input
+  // stays hidden rather than offering a setting other channels ignore.
+  const showDisplayFields = webhookSupportsDisplayFields(
+    webhooks?.data,
+    alertWebhookId,
+  );
   const alertThresholdType = useWatch({ control, name: 'alert.thresholdType' });
   const alertThreshold = useWatch({ control, name: 'alert.threshold' });
   const alertThresholdMax = useWatch({ control, name: 'alert.thresholdMax' });
@@ -256,6 +273,46 @@ export function TileAlertEditor({
             type={alertChannelType}
             namePrefix="alert."
           />
+          {showDisplayFields && (
+            <>
+              <Text size="xxs" opacity={0.5} mb={4} mt="sm">
+                {t('alertEditor.mention')}
+              </Text>
+              <Controller
+                control={control}
+                name="alert.mention"
+                render={({ field }) => (
+                  <NativeSelect
+                    size="xs"
+                    data-testid="alert-mention-select"
+                    data={[
+                      { value: '', label: t('alertEditor.mentionNone') },
+                      { value: 'here', label: '@here' },
+                      { value: 'channel', label: '@channel' },
+                    ]}
+                    value={field.value ?? ''}
+                    onChange={event =>
+                      field.onChange(event.currentTarget.value || undefined)
+                    }
+                  />
+                )}
+              />
+              <Text size="xxs" opacity={0.5} mt={4}>
+                {t('alertEditor.mentionHint')}
+              </Text>
+              <Text size="xxs" opacity={0.5} mb={4} mt="sm">
+                {t('alertEditor.displayFields')}
+              </Text>
+              <AlertDisplayFields
+                control={control}
+                name="alert.displayFields"
+                tableConnection={tableConnection}
+              />
+              <Text size="xxs" opacity={0.5} mt={4}>
+                {t('alertEditor.displayFieldsHint')}
+              </Text>
+            </>
+          )}
           <AlertNoteField
             control={control}
             name="alert.note"

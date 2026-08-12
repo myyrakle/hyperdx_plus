@@ -447,6 +447,7 @@ export function ChartEditorControls({
             control={control}
             setValue={setValue}
             alert={alert}
+            tableConnection={tableConnection}
             onRemove={() => setValue('alert', undefined)}
           />
         </Box>

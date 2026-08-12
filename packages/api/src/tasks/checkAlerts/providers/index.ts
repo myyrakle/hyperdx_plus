@@ -66,6 +66,12 @@ export interface AlertProvider {
 
   buildLogSearchLink(params: {
     endTime: Date;
+    /**
+     * When set, the link additionally carries the saved search's full config plus
+     * this condition as an extra SQL filter, so it opens scoped to the group that
+     * fired rather than to the whole search.
+     */
+    groupFilterCondition?: string;
     savedSearch: ISavedSearch;
     startTime: Date;
   }): string;

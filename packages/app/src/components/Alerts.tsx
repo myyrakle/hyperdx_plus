@@ -32,11 +32,10 @@ const WebhookChannelForm = <T extends FieldValues>({
   name?: string;
 }) => {
   const { t } = useTranslation('alerts');
-  const { data: webhooks, refetch: refetchWebhooks } = api.useWebhooks([
-    WebhookService.Slack,
-    WebhookService.Generic,
-    WebhookService.IncidentIO,
-  ]);
+  // Every service, so adding one never silently makes it unpickable here.
+  const { data: webhooks, refetch: refetchWebhooks } = api.useWebhooks(
+    Object.values(WebhookService),
+  );
   const [opened, { open, close }] = useDisclosure(false);
 
   const hasWebhooks = Array.isArray(webhooks?.data) && webhooks.data.length > 0;

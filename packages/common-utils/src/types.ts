@@ -361,9 +361,26 @@ export type StacktraceBreadcrumb = {
 // -------------------------
 export enum WebhookService {
   Slack = 'slack',
+  /**
+   * Slack incoming webhook aimed at error triage: structured Block Kit blocks
+   * inside a colour-coded attachment (red firing, green resolved) instead of a
+   * single markdown section. Supports an alert's `displayFields`, which every
+   * other service ignores.
+   */
+  SlackError = 'slack_error',
   Generic = 'generic',
   IncidentIO = 'incidentio',
 }
+
+/** Services delivered to a Slack incoming webhook URL. */
+export const SLACK_WEBHOOK_SERVICES: string[] = [
+  WebhookService.Slack,
+  WebhookService.SlackError,
+];
+
+export const isSlackWebhookService = (
+  service: WebhookService | string | undefined | null,
+): boolean => service != null && SLACK_WEBHOOK_SERVICES.includes(service);
 
 /**
  * Base webhook schema (matches backend IWebhook but with JSON-serialized types).
@@ -582,6 +599,37 @@ export const scheduleStartAtSchema = z
 
 export const alertNoteSchema = z.string().min(1).max(4096).nullish();
 
+/**
+ * An extra value pulled from a representative row. `alias` is the label shown in
+ * the notification; without it a label is derived from the expression.
+ */
+export const AlertDisplayFieldSchema = z.object({
+  valueExpression: z.string(),
+  alias: z.string().optional(),
+});
+
+export type AlertDisplayField = z.infer<typeof AlertDisplayFieldSchema>;
+
+/**
+ * What to pull from a representative row of the alerting group, by role.
+ *
+ * The named slots have fixed labels and a fixed layout — the error message reads
+ * as a short field, the stack trace always gets a full-width code block — so a
+ * notification looks the same regardless of what the values happen to contain.
+ */
+export const AlertDisplayFieldsSchema = z.object({
+  errorMessage: z.string().optional(),
+  stacktrace: z.string().optional(),
+  extra: z.array(AlertDisplayFieldSchema).optional(),
+});
+
+export type AlertDisplayFields = z.infer<typeof AlertDisplayFieldsSchema>;
+
+/** Broadcast mentions an alert can opt into, stored without Slack's syntax. */
+export const AlertMentionSchema = z.enum(['here', 'channel']);
+
+export type AlertMention = z.infer<typeof AlertMentionSchema>;
+
 export const AlertBaseObjectSchema = z.object({
   id: z.string().optional(),
   interval: AlertIntervalSchema,
@@ -608,6 +656,17 @@ export const AlertBaseObjectSchema = z.object({
     })
     .optional(),
   numConsecutiveWindows: z.number().int().min(1).nullish(),
+  /**
+   * Values pulled from a representative row of the alerting group and rendered
+   * as labelled fields in the notification.
+   * Only the `slack_error` webhook service renders these.
+   */
+  displayFields: AlertDisplayFieldsSchema.optional(),
+  /**
+   * Broadcast mention to prepend when the alert fires. Resolutions never carry
+   * one. Only the `slack_error` webhook service renders this.
+   */
+  mention: AlertMentionSchema.optional(),
 });
 
 // Keep AlertBaseSchema as a ZodObject for backwards compatibility with

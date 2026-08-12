@@ -84,6 +84,13 @@ export const alertEditor = {
   via: 'via',
   createdBy: 'Created by {{name}}',
   sendTo: 'Send to',
+  mention: 'mention on alert',
+  mentionNone: 'no mention',
+  mentionHint:
+    'Prepended when the alert fires. Resolutions never mention. Slack (Error) only.',
+  displayFields: 'fields to include in the message',
+  displayFieldsHint:
+    'Read from the most recent row of the group that fired. Slack (Error) only.',
   floatingPointNote:
     'Note: Floating-point query results are not rounded during equality comparison.',
 } as const;

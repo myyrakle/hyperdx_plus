@@ -34,6 +34,7 @@ import {
   type AlertTask,
   AlertTaskType,
 } from '@/tasks/checkAlerts/providers';
+import { buildSearchLinkUrl } from '@/tasks/checkAlerts/searchLink';
 import { MappedOmit } from '@/tasks/types';
 import { convertMsToGranularityString } from '@/utils/common';
 import logger from '@/utils/logger';
@@ -320,21 +321,22 @@ export default class DefaultAlertProvider implements AlertProvider {
 
   buildLogSearchLink({
     endTime,
+    groupFilterCondition,
     savedSearch,
     startTime,
   }: {
     endTime: Date;
+    groupFilterCondition?: string;
     savedSearch: ISavedSearch;
     startTime: Date;
   }): string {
-    const url = new URL(`${config.FRONTEND_URL}/search/${savedSearch.id}`);
-    const queryParams = new URLSearchParams({
-      from: startTime.getTime().toString(),
-      to: endTime.getTime().toString(),
-      isLive: 'false',
+    return buildSearchLinkUrl({
+      endTime,
+      frontendUrl: config.FRONTEND_URL,
+      groupFilterCondition,
+      savedSearch,
+      startTime,
     });
-    url.search = queryParams.toString();
-    return url.toString();
   }
 
   buildChartLink({

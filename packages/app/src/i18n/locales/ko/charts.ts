@@ -291,6 +291,13 @@ export const charts = {
     via: '전송 수단',
     createdBy: '{{name}}이(가) 생성',
     sendTo: '전송 대상',
+    mention: '발화 시 멘션',
+    mentionNone: '멘션 없음',
+    mentionHint:
+      '알림이 발화할 때만 붙습니다. 해소 시에는 멘션하지 않습니다. Slack (Error) 전용입니다.',
+    displayFields: '메시지에 포함할 필드',
+    displayFieldsHint:
+      '발화한 그룹의 가장 최근 행에서 값을 읽습니다. Slack (Error) 전용입니다.',
     floatingPointNote:
       '참고: 등호 비교 시 부동소수점 쿼리 결과는 반올림되지 않습니다.',
   },

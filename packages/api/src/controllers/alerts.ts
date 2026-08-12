@@ -152,6 +152,8 @@ const makeAlert = (alert: AlertInput, userId?: ObjectId): Partial<IAlert> => {
     // Log alerts
     savedSearch: alert.savedSearchId as unknown as ObjectId,
     groupBy: alert.groupBy,
+    displayFields: alert.displayFields,
+    mention: alert.mention,
     // Chart alerts
     dashboard: alert.dashboardId as unknown as ObjectId,
     tileId: alert.tileId,

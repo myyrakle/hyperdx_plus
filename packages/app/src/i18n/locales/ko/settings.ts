@@ -170,6 +170,7 @@ export const settings = {
     createTitle: '웹훅 생성',
     serviceType: '서비스 타입',
     serviceSlack: 'Slack',
+    serviceSlackError: 'Slack (Error)',
     serviceIncidentIo: 'incident.io',
     serviceGeneric: '일반',
     name: '웹훅 이름',

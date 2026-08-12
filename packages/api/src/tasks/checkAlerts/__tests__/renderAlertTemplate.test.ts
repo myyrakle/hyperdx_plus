@@ -2,6 +2,7 @@ import {
   AlertState,
   AlertThresholdType,
   SourceKind,
+  WebhookService,
 } from '@hyperdx/common-utils/dist/types';
 import mongoose from 'mongoose';
 
@@ -13,6 +14,7 @@ import {
   buildAlertMessageTemplateTitle,
   renderAlertTemplate,
 } from '@/tasks/checkAlerts/template';
+import * as slack from '@/utils/slack';
 
 let alertProvider: any;
 
@@ -101,6 +103,7 @@ const makeSearchView = (
     updatedAt: new Date(),
   },
   attributes: {},
+  attributesFlat: {},
   granularity: '1m',
   group: overrides.group,
   isGroupedAlert: false,
@@ -139,6 +142,7 @@ const makeTileView = (
     updatedAt: new Date(),
   },
   attributes: {},
+  attributesFlat: {},
   granularity: '5 minute',
   group: overrides.group,
   isGroupedAlert: false,
@@ -219,6 +223,423 @@ const alertCases: AlertCase[] = [
     okValue: 6,
   },
 ];
+
+describe('renderAlertTemplate group scoping', () => {
+  const groupedView = (
+    overrides: Partial<AlertMessageTemplateDefaultView> = {},
+  ): AlertMessageTemplateDefaultView => {
+    const view = makeSearchView({ group: 'ServiceName:api' });
+    return {
+      ...view,
+      alert: { ...view.alert, groupBy: 'ServiceName' },
+      attributesFlat: { ServiceName: 'api' },
+      isGroupedAlert: true,
+      ...overrides,
+    };
+  };
+
+  const makeClient = (sampleRow?: Record<string, unknown>) =>
+    ({
+      query: jest.fn().mockResolvedValue({
+        json: jest
+          .fn()
+          .mockResolvedValue({ data: sampleRow ? [sampleRow] : [] }),
+        text: jest.fn().mockResolvedValue(sampleLogsCsv),
+      }),
+    }) as any;
+
+  const renderWith = ({
+    view,
+    clickhouseClient,
+    state = AlertState.ALERT,
+    teamWebhooksById = new Map(),
+  }: {
+    view: AlertMessageTemplateDefaultView;
+    clickhouseClient: any;
+    state?: AlertState;
+    teamWebhooksById?: Map<string, any>;
+  }) =>
+    renderAlertTemplate({
+      alertProvider,
+      clickhouseClient,
+      metadata: mockMetadata,
+      state,
+      template: null,
+      title: 'Test Alert Title',
+      view,
+      teamWebhooksById,
+    });
+
+  const queriedSql = (clickhouseClient: any): string[] =>
+    clickhouseClient.query.mock.calls.map((call: any[]) => call[0].query);
+
+  describe('sample log query', () => {
+    it('restricts the sample rows to the group that fired', async () => {
+      const clickhouseClient = makeClient();
+
+      await renderWith({ view: groupedView(), clickhouseClient });
+
+      expect(queriedSql(clickhouseClient)[0]).toContain(
+        "toString(ServiceName) = 'api'",
+      );
+    });
+
+    it('leaves a non-grouped alert query unfiltered', async () => {
+      const clickhouseClient = makeClient();
+
+      await renderWith({ view: makeSearchView(), clickhouseClient });
+
+      expect(queriedSql(clickhouseClient)[0]).not.toContain('toString(');
+    });
+  });
+
+  describe('Slack (Error) delivery', () => {
+    const webhookId = '507f1f77bcf86cd799439011';
+    const advancedWebhook = {
+      _id: { toString: () => webhookId },
+      name: 'advanced',
+      service: WebhookService.SlackError,
+      url: 'https://hooks.slack.com/services/T0/B0/XXXX',
+    };
+    const plainWebhook = {
+      ...advancedWebhook,
+      service: WebhookService.Slack,
+    };
+
+    const viewWithChannel = (
+      overrides: Partial<AlertMessageTemplateDefaultView> = {},
+    ) => {
+      const view = groupedView(overrides);
+      return {
+        ...view,
+        alert: { ...view.alert, channel: { type: 'webhook', webhookId } },
+      } as AlertMessageTemplateDefaultView;
+    };
+
+    const lastSlackPayload = () => {
+      const calls = (slack.postMessageToWebhook as jest.Mock).mock.calls;
+      return calls[calls.length - 1][1];
+    };
+
+    /** All attachment text, flattened; the service uses legacy attachments. */
+    const lastSlackText = () => JSON.stringify(lastSlackPayload().attachments);
+
+    beforeEach(() => {
+      (slack.postMessageToWebhook as jest.Mock).mockClear();
+    });
+
+    it('sends a coloured attachment rather than a single markdown section', async () => {
+      await renderWith({
+        view: viewWithChannel(),
+        clickhouseClient: makeClient(),
+        teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
+      });
+
+      const attachments = lastSlackPayload().attachments;
+      expect(attachments[0].color).toBe('danger');
+      expect(attachments[0].fields.length).toBeGreaterThan(0);
+    });
+
+    it('colours a firing alert red', async () => {
+      await renderWith({
+        view: viewWithChannel(),
+        clickhouseClient: makeClient(),
+        teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
+      });
+
+      expect(lastSlackPayload().attachments[0].color).toBe('danger');
+    });
+
+    it('colours a resolved alert green', async () => {
+      await renderWith({
+        view: viewWithChannel(),
+        clickhouseClient: makeClient(),
+        state: AlertState.OK,
+        teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
+      });
+
+      expect(lastSlackPayload().attachments[0].color).toBe('good');
+    });
+
+    it('includes the display fields of a representative row of the group', async () => {
+      const view = viewWithChannel();
+      await renderWith({
+        view: {
+          ...view,
+          alert: {
+            ...view.alert,
+            displayFields: { errorMessage: 'StatusMessage' },
+          },
+        },
+        clickhouseClient: makeClient({ __hdx_display_0: 'connection refused' }),
+        teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
+      });
+
+      expect(lastSlackText()).toContain('connection refused');
+    });
+
+    it('scopes the representative-row query to the group', async () => {
+      const clickhouseClient = makeClient({ ServiceName: 'api' });
+      const view = viewWithChannel();
+
+      await renderWith({
+        view: {
+          ...view,
+          alert: {
+            ...view.alert,
+            displayFields: { errorMessage: 'ServiceName' },
+          },
+        },
+        clickhouseClient,
+        teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
+      });
+
+      const sampleRowQuery = queriedSql(clickhouseClient)[1];
+      expect(sampleRowQuery).toContain("toString(ServiceName) = 'api'");
+    });
+
+    it('points the title at the group-scoped row list', async () => {
+      await renderWith({
+        view: viewWithChannel(),
+        clickhouseClient: makeClient(),
+        teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
+      });
+
+      const titleLink = lastSlackPayload().attachments[0].title_link;
+      expect(titleLink).toContain('/search?');
+      expect(titleLink).toContain('filters=');
+    });
+
+    it('keeps the full saved search reachable from the footer', async () => {
+      await renderWith({
+        view: viewWithChannel(),
+        clickhouseClient: makeClient(),
+        teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
+      });
+
+      expect(lastSlackText()).toContain('Open search');
+    });
+
+    it('does not query for a representative row when no display fields are set', async () => {
+      const clickhouseClient = makeClient();
+
+      await renderWith({
+        view: viewWithChannel(),
+        clickhouseClient,
+        teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
+      });
+
+      // Only the sample-log query for the message body.
+      expect(clickhouseClient.query).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves the plain Slack service on the single-section layout', async () => {
+      const view = viewWithChannel();
+
+      await renderWith({
+        view: {
+          ...view,
+          alert: {
+            ...view.alert,
+            displayFields: { errorMessage: 'StatusMessage' },
+          },
+        },
+        clickhouseClient: makeClient({ __hdx_display_0: 'connection refused' }),
+        teamWebhooksById: new Map([[webhookId, plainWebhook as any]]),
+      });
+
+      const blocks = lastSlackPayload().blocks;
+      expect(blocks).toHaveLength(1);
+      expect(JSON.stringify(blocks)).not.toContain('connection refused');
+    });
+  });
+});
+
+describe('renderAlertTemplate for tile alerts', () => {
+  const webhookId = '507f1f77bcf86cd799439011';
+  const errorWebhook = {
+    _id: { toString: () => webhookId },
+    name: 'errors',
+    service: WebhookService.SlackError,
+    url: 'https://hooks.slack.com/services/T0/B0/XXXX',
+  };
+
+  const groupedTile = makeTile({ id: 'test-tile-id' });
+  groupedTile.config = {
+    ...(groupedTile.config as any),
+    source: 'fake-source-id',
+    where: 'StatusCode:Error',
+    whereLanguage: 'lucene',
+    groupBy: [{ valueExpression: 'StatusMessage' }],
+    filters: [{ type: 'sql', condition: 'ServiceName IS NOT NULL' }],
+  } as any;
+
+  const tileView = (
+    overrides: Partial<AlertMessageTemplateDefaultView> = {},
+  ): AlertMessageTemplateDefaultView => {
+    const view = makeTileView({ group: 'StatusMessage:boom' });
+    return {
+      ...view,
+      alert: {
+        ...view.alert,
+        channel: { type: 'webhook', webhookId },
+        displayFields: { errorMessage: 'StatusMessage' },
+      },
+      dashboard: { ...(view.dashboard as any), tiles: [groupedTile] },
+      source: makeSearchView().source,
+      attributesFlat: { StatusMessage: 'boom' },
+      isGroupedAlert: true,
+      ...overrides,
+    } as AlertMessageTemplateDefaultView;
+  };
+
+  const makeClient = (sampleRow?: Record<string, unknown>) =>
+    ({
+      query: jest.fn().mockResolvedValue({
+        json: jest
+          .fn()
+          .mockResolvedValue({ data: sampleRow ? [sampleRow] : [] }),
+        text: jest.fn().mockResolvedValue(sampleLogsCsv),
+      }),
+    }) as any;
+
+  const renderTile = (clickhouseClient: any, state = AlertState.ALERT) =>
+    renderAlertTemplate({
+      alertProvider,
+      clickhouseClient,
+      metadata: mockMetadata,
+      state,
+      template: null,
+      title: 'Test Alert Title',
+      view: tileView(),
+      teamWebhooksById: new Map([[webhookId, errorWebhook as any]]),
+    });
+
+  const lastPayload = () => {
+    const calls = (slack.postMessageToWebhook as jest.Mock).mock.calls;
+    return calls[calls.length - 1][1];
+  };
+  const lastText = () => JSON.stringify(lastPayload().attachments);
+
+  beforeEach(() => {
+    (slack.postMessageToWebhook as jest.Mock).mockClear();
+  });
+
+  describe('mention', () => {
+    const renderWithMention = (
+      mention: 'here' | 'channel' | undefined,
+      state = AlertState.ALERT,
+    ) => {
+      const view = tileView();
+      return renderAlertTemplate({
+        alertProvider,
+        clickhouseClient: makeClient(),
+        metadata: mockMetadata,
+        state,
+        template: null,
+        title: 'Test Alert Title',
+        view: { ...view, alert: { ...view.alert, mention } },
+        teamWebhooksById: new Map([[webhookId, errorWebhook as any]]),
+      });
+    };
+
+    it('broadcasts to the channel members when the alert opts in', async () => {
+      await renderWithMention('here');
+
+      expect(lastPayload().text).toBe('<!here>');
+    });
+
+    it('supports the whole-channel broadcast', async () => {
+      await renderWithMention('channel');
+
+      expect(lastPayload().text).toBe('<!channel>');
+    });
+
+    it('stays quiet when the alert does not opt in', async () => {
+      await renderWithMention(undefined);
+
+      expect(lastPayload().text).toBeUndefined();
+    });
+
+    it('does not wake anyone on a resolution', async () => {
+      // A resolution is good news; paging people again would train them to
+      // mute the channel.
+      await renderWithMention('here', AlertState.OK);
+
+      expect(lastPayload().text).toBeUndefined();
+    });
+  });
+
+  it('renders the structured layout rather than the plain fallback', async () => {
+    await renderTile(makeClient());
+
+    // The fallback has no fields; the structured layout renders the group.
+    const attachments = lastPayload().attachments;
+    expect(attachments[0].fields.length).toBeGreaterThan(0);
+    expect(attachments[attachments.length - 1].footer).toContain('events');
+  });
+
+  it('colours the attachment by state', async () => {
+    await renderTile(makeClient());
+    expect(lastPayload().attachments[0].color).toBe('danger');
+
+    await renderTile(makeClient(), AlertState.OK);
+    expect(lastPayload().attachments[0].color).toBe('good');
+  });
+
+  it('shows the group value from the tile group-by', async () => {
+    await renderTile(makeClient());
+
+    expect(lastText()).toContain('boom');
+  });
+
+  it('includes the display fields of a representative row', async () => {
+    // Keyed by the alias the query asks for, which is what ClickHouse returns.
+    await renderTile(makeClient({ __hdx_display_0: 'connection refused' }));
+
+    expect(lastText()).toContain('connection refused');
+  });
+
+  it('scopes the representative-row query to the group', async () => {
+    const clickhouseClient = makeClient({ StatusMessage: 'boom' });
+
+    await renderTile(clickhouseClient);
+
+    const sql = clickhouseClient.query.mock.calls.map((c: any[]) => c[0].query);
+    expect(sql.join('\n')).toContain("toString(StatusMessage) = 'boom'");
+  });
+
+  it('aliases the display-field columns in the generated SQL', async () => {
+    // Unit tests mock renderChartConfig, so only a real render proves the
+    // response can be keyed back. ClickHouse names an unaliased
+    // `SpanAttributes['x']` column `arrayElement(SpanAttributes, 'x')`, which
+    // silently yielded empty fields before the alias was added.
+    const clickhouseClient = makeClient({ __hdx_display_0: 'boom' });
+
+    await renderTile(clickhouseClient);
+
+    const sampleRowSql = clickhouseClient.query.mock.calls
+      .map((c: any[]) => c[0].query)
+      .find((sql: string) => sql.includes('__hdx_display_0'));
+
+    expect(sampleRowSql).toContain('StatusMessage AS "__hdx_display_0"');
+  });
+
+  it('points the title at the group-filtered row list', async () => {
+    await renderTile(makeClient());
+
+    const titleLink = lastPayload().attachments[0].title_link;
+    expect(titleLink).toContain('/search?');
+    expect(titleLink).toContain('filters=');
+  });
+
+  it('keeps the dashboard chart reachable from the footer', async () => {
+    await renderTile(makeClient());
+
+    expect(lastText()).toContain('/dashboards/');
+    expect(lastText()).toContain('Open chart');
+  });
+});
 
 describe('renderAlertTemplate', () => {
   describe('saved search alerts', () => {

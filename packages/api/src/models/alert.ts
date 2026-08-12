@@ -72,6 +72,21 @@ export interface IAlert {
 
   // SavedSearch alerts
   groupBy?: string;
+  /**
+   * Values pulled from a representative row of the alerting group and rendered
+   * as labelled fields in the notification.
+   * Only the `slack_error` webhook service renders these.
+   */
+  displayFields?: {
+    errorMessage?: string;
+    stacktrace?: string;
+    extra?: { valueExpression: string; alias?: string }[];
+  };
+  /**
+   * Broadcast mention to prepend when the alert fires. Resolutions never carry
+   * one. Only the `slack_error` webhook service renders this.
+   */
+  mention?: 'here' | 'channel';
   savedSearch?: ObjectId;
 
   // Tile alerts
@@ -181,6 +196,29 @@ const AlertSchema = new Schema<IAlert>(
     },
     groupBy: {
       type: String,
+      required: false,
+    },
+    displayFields: {
+      type: {
+        _id: false,
+        errorMessage: { type: String, required: false },
+        stacktrace: { type: String, required: false },
+        extra: {
+          type: [
+            {
+              _id: false,
+              valueExpression: { type: String, required: true },
+              alias: { type: String, required: false },
+            },
+          ],
+          required: false,
+        },
+      },
+      required: false,
+    },
+    mention: {
+      type: String,
+      enum: ['here', 'channel'],
       required: false,
     },
 

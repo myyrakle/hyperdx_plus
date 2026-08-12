@@ -1,4 +1,16 @@
 export const alerts = {
+  displayFields: {
+    errorMessage: 'error message',
+    errorMessagePlaceholder: 'StatusMessage',
+    stacktrace: 'stack trace',
+    stacktracePlaceholder: "SpanAttributes['code.stacktrace']",
+    extra: 'extra fields',
+    extraPlaceholder: "SpanAttributes['db.query.text']",
+    as: 'AS',
+    add: 'Add field',
+    remove: 'Remove field',
+    aliasPlaceholder: 'label (optional)',
+  },
   note: {
     label: 'Note',
     placeholder:
@@ -117,6 +129,13 @@ export const alerts = {
     windowOffset: 'from each {{interval}} window',
     groupedBy: 'grouped by',
     sqlColumns: 'SQL Columns',
+    mention: 'mention on alert',
+    mentionNone: 'no mention',
+    mentionHint:
+      'Prepended when the alert fires. Resolutions never mention. Slack (Error) only.',
+    displayFields: 'fields to include in the message',
+    displayFieldsHint:
+      'Read from the most recent row of the group that fired. Slack (Error) only.',
     sendTo: 'Send to',
     groupedWarning:
       'Warning: Alerts with this threshold type and a “grouped by” value will not alert for periods with no data for a group.',
