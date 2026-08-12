@@ -63,12 +63,21 @@ export const fetchGroupSampleFields = async ({
   const isTextSource =
     source.kind === SourceKind.Log || source.kind === SourceKind.Trace;
 
+  // ClickHouse names an unaliased column after its own rendering of the
+  // expression — `SpanAttributes['x']` comes back as
+  // `arrayElement(SpanAttributes, 'x')` — so the response cannot be keyed by the
+  // expression text. Alias every column and read the aliases back.
+  const aliasOf = (index: number) => `__hdx_display_${index}`;
+
   const chartConfig: ChartConfigWithOptDateRange = {
     connection: '', // the ClickHouse client is already bound to a connection
     displayType: DisplayType.Search,
     dateRange: [startTime, endTime],
     from: source.from,
-    select: expressions.join(', '),
+    select: expressions.map((valueExpression, i) => ({
+      valueExpression,
+      alias: aliasOf(i),
+    })),
     where: query.where ?? '',
     whereLanguage: query.whereLanguage ?? undefined,
     implicitColumnExpression: isTextSource
@@ -113,14 +122,15 @@ export const fetchGroupSampleFields = async ({
       return [];
     }
 
-    return expressions.map(expression =>
-      makeMessageField(
+    return expressions.map((expression, i) => {
+      const value = row[aliasOf(i)];
+      return makeMessageField(
         formatFieldLabel(expression),
         // A column the query did not return still gets a field, so a mismatch is
         // visible in the notification rather than silently dropped.
-        row[expression] == null ? '' : `${row[expression]}`,
-      ),
-    );
+        value == null ? '' : `${value}`,
+      );
+    });
   } catch (e) {
     logger.error(
       {

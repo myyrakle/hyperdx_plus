@@ -371,9 +371,7 @@ describe('renderAlertTemplate group scoping', () => {
             displayFields: "SpanAttributes['exception.message']",
           },
         },
-        clickhouseClient: makeClient({
-          "SpanAttributes['exception.message']": 'connection refused',
-        }),
+        clickhouseClient: makeClient({ __hdx_display_0: 'connection refused' }),
         teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
       });
 
@@ -445,9 +443,7 @@ describe('renderAlertTemplate group scoping', () => {
             displayFields: "SpanAttributes['exception.message']",
           },
         },
-        clickhouseClient: makeClient({
-          "SpanAttributes['exception.message']": 'connection refused',
-        }),
+        clickhouseClient: makeClient({ __hdx_display_0: 'connection refused' }),
         teamWebhooksById: new Map([[webhookId, plainWebhook as any]]),
       });
 
@@ -552,11 +548,8 @@ describe('renderAlertTemplate for tile alerts', () => {
   });
 
   it('includes the display fields of a representative row', async () => {
-    await renderTile(
-      makeClient({
-        "SpanAttributes['exception.message']": 'connection refused',
-      }),
-    );
+    // Keyed by the alias the query asks for, which is what ClickHouse returns.
+    await renderTile(makeClient({ __hdx_display_0: 'connection refused' }));
 
     expect(JSON.stringify(lastBlocks())).toContain('connection refused');
   });
@@ -568,6 +561,24 @@ describe('renderAlertTemplate for tile alerts', () => {
 
     const sql = clickhouseClient.query.mock.calls.map((c: any[]) => c[0].query);
     expect(sql.join('\n')).toContain("toString(StatusMessage) = 'boom'");
+  });
+
+  it('aliases the display-field columns in the generated SQL', async () => {
+    // Unit tests mock renderChartConfig, so only a real render proves the
+    // response can be keyed back. ClickHouse names an unaliased
+    // `SpanAttributes['x']` column `arrayElement(SpanAttributes, 'x')`, which
+    // silently yielded empty fields before the alias was added.
+    const clickhouseClient = makeClient({ __hdx_display_0: 'boom' });
+
+    await renderTile(clickhouseClient);
+
+    const sampleRowSql = clickhouseClient.query.mock.calls
+      .map((c: any[]) => c[0].query)
+      .find((sql: string) => sql.includes('__hdx_display_0'));
+
+    expect(sampleRowSql).toContain(
+      'SpanAttributes[\'exception.message\'] AS "__hdx_display_0"',
+    );
   });
 
   it('points the title at the group-filtered row list', async () => {

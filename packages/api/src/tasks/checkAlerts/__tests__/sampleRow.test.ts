@@ -46,11 +46,15 @@ beforeEach(() => {
 
 describe('fetchGroupSampleFields', () => {
   it('returns a labelled field per display field of the row', async () => {
+    // ClickHouse names an unaliased column after its own rendering of the
+    // expression (`arrayElement(SpanAttributes, 'exception.message')`), never
+    // after the expression text, so the query has to alias the columns and read
+    // those aliases back.
     const result = await call({
       clickhouseClient: makeClient([
         {
-          "SpanAttributes['exception.message']": 'connection refused',
-          "SpanAttributes['exception.stacktrace']": 'at foo()\nat bar()',
+          __hdx_display_0: 'connection refused',
+          __hdx_display_1: 'at foo()\nat bar()',
         },
       ]) as any,
       displayFields:
@@ -67,12 +71,31 @@ describe('fetchGroupSampleFields', () => {
     ]);
   });
 
-  it('selects only the requested display fields, limited to one row', async () => {
+  it('aliases each display field so the response can be read back reliably', async () => {
+    await call({
+      displayFields:
+        "SpanAttributes['exception.message'], SpanAttributes['exception.stacktrace']",
+    });
+
+    expect(renderChartConfig.mock.calls[0][0].select).toEqual([
+      {
+        valueExpression: "SpanAttributes['exception.message']",
+        alias: '__hdx_display_0',
+      },
+      {
+        valueExpression: "SpanAttributes['exception.stacktrace']",
+        alias: '__hdx_display_1',
+      },
+    ]);
+  });
+
+  it('reads only one row', async () => {
     await call();
 
-    const chartConfig = renderChartConfig.mock.calls[0][0];
-    expect(chartConfig.select).toBe("SpanAttributes['exception.message']");
-    expect(chartConfig.limit).toEqual({ limit: 1, offset: 0 });
+    expect(renderChartConfig.mock.calls[0][0].limit).toEqual({
+      limit: 1,
+      offset: 0,
+    });
   });
 
   it('keeps the predicate and ordering of the alert query', async () => {
@@ -125,7 +148,7 @@ describe('fetchGroupSampleFields', () => {
   it('stringifies non-string column values', async () => {
     const result = await call({
       displayFields: 'SeverityNumber',
-      clickhouseClient: makeClient([{ SeverityNumber: 17 }]) as any,
+      clickhouseClient: makeClient([{ __hdx_display_0: 17 }]) as any,
     });
 
     expect(result).toEqual([
