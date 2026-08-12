@@ -7,6 +7,7 @@ import { json, jsonParseLinter } from '@codemirror/lang-json';
 import { linter } from '@codemirror/lint';
 import {
   AlertState,
+  isSlackWebhookService,
   WebhookApiData,
   WebhookService,
 } from '@hyperdx/common-utils/dist/types';
@@ -303,6 +304,11 @@ export function WebhookForm({
               label={t('webhooks.serviceSlack')}
             />
             <Radio
+              value={WebhookService.SlackAdvanced}
+              label={t('webhooks.serviceSlackAdvanced')}
+              description={t('webhooks.serviceSlackAdvancedHint')}
+            />
+            <Radio
               value={WebhookService.IncidentIO}
               label={t('webhooks.serviceIncidentIo')}
             />
@@ -328,7 +334,7 @@ export function WebhookForm({
             isEditing ? t('webhooks.urlMaskedDescription') : undefined
           }
           placeholder={
-            service === WebhookService.Slack
+            isSlackWebhookService(service)
               ? 'https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX'
               : service === WebhookService.IncidentIO
                 ? 'https://api.incident.io/v2/alert_events/http/ZZZZZZZZ?token=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
@@ -340,7 +346,7 @@ export function WebhookForm({
           {...form.register('url', {
             required: true,
             validate: (value, formValues) =>
-              formValues.service === WebhookService.Slack
+              isSlackWebhookService(formValues.service)
                 ? isValidSlackUrl(value) || t('webhooks.urlInvalidSlack')
                 : isValidUrl(value) || t('webhooks.urlInvalid'),
           })}

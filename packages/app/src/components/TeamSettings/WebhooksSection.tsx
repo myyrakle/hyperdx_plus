@@ -81,11 +81,10 @@ function DeleteWebhookButton({
 export default function WebhooksSection() {
   const { t } = useTranslation('settings');
   const { t: tCommon } = useTranslation('common');
-  const { data: webhookData, refetch: refetchWebhooks } = api.useWebhooks([
-    WebhookService.Slack,
-    WebhookService.Generic,
-    WebhookService.IncidentIO,
-  ]);
+  // Every service, so adding one never silently hides existing webhooks here.
+  const { data: webhookData, refetch: refetchWebhooks } = api.useWebhooks(
+    Object.values(WebhookService),
+  );
 
   const [editedWebhookId, setEditedWebhookId] = useState<string | null>(null);
 

@@ -72,6 +72,12 @@ export interface IAlert {
 
   // SavedSearch alerts
   groupBy?: string;
+  /**
+   * Comma-separated SQL expressions pulled from a representative row of the
+   * alerting group and rendered as labelled fields in the notification.
+   * Only the `slack_advanced` webhook service renders these.
+   */
+  displayFields?: string;
   savedSearch?: ObjectId;
 
   // Tile alerts
@@ -180,6 +186,10 @@ const AlertSchema = new Schema<IAlert>(
       required: false,
     },
     groupBy: {
+      type: String,
+      required: false,
+    },
+    displayFields: {
       type: String,
       required: false,
     },

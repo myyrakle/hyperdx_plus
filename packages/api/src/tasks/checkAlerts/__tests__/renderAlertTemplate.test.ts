@@ -2,6 +2,7 @@ import {
   AlertState,
   AlertThresholdType,
   SourceKind,
+  WebhookService,
 } from '@hyperdx/common-utils/dist/types';
 import mongoose from 'mongoose';
 
@@ -13,6 +14,7 @@ import {
   buildAlertMessageTemplateTitle,
   renderAlertTemplate,
 } from '@/tasks/checkAlerts/template';
+import * as slack from '@/utils/slack';
 
 let alertProvider: any;
 
@@ -101,6 +103,7 @@ const makeSearchView = (
     updatedAt: new Date(),
   },
   attributes: {},
+  attributesFlat: {},
   granularity: '1m',
   group: overrides.group,
   isGroupedAlert: false,
@@ -139,6 +142,7 @@ const makeTileView = (
     updatedAt: new Date(),
   },
   attributes: {},
+  attributesFlat: {},
   granularity: '5 minute',
   group: overrides.group,
   isGroupedAlert: false,
@@ -219,6 +223,206 @@ const alertCases: AlertCase[] = [
     okValue: 6,
   },
 ];
+
+describe('renderAlertTemplate group scoping', () => {
+  const groupedView = (
+    overrides: Partial<AlertMessageTemplateDefaultView> = {},
+  ): AlertMessageTemplateDefaultView => {
+    const view = makeSearchView({ group: 'ServiceName:api' });
+    return {
+      ...view,
+      alert: { ...view.alert, groupBy: 'ServiceName' },
+      attributesFlat: { ServiceName: 'api' },
+      isGroupedAlert: true,
+      ...overrides,
+    };
+  };
+
+  const makeClient = (sampleRow?: Record<string, unknown>) =>
+    ({
+      query: jest.fn().mockResolvedValue({
+        json: jest
+          .fn()
+          .mockResolvedValue({ data: sampleRow ? [sampleRow] : [] }),
+        text: jest.fn().mockResolvedValue(sampleLogsCsv),
+      }),
+    }) as any;
+
+  const renderWith = ({
+    view,
+    clickhouseClient,
+    state = AlertState.ALERT,
+    teamWebhooksById = new Map(),
+  }: {
+    view: AlertMessageTemplateDefaultView;
+    clickhouseClient: any;
+    state?: AlertState;
+    teamWebhooksById?: Map<string, any>;
+  }) =>
+    renderAlertTemplate({
+      alertProvider,
+      clickhouseClient,
+      metadata: mockMetadata,
+      state,
+      template: null,
+      title: 'Test Alert Title',
+      view,
+      teamWebhooksById,
+    });
+
+  const queriedSql = (clickhouseClient: any): string[] =>
+    clickhouseClient.query.mock.calls.map((call: any[]) => call[0].query);
+
+  describe('sample log query', () => {
+    it('restricts the sample rows to the group that fired', async () => {
+      const clickhouseClient = makeClient();
+
+      await renderWith({ view: groupedView(), clickhouseClient });
+
+      expect(queriedSql(clickhouseClient)[0]).toContain(
+        "toString(ServiceName) = 'api'",
+      );
+    });
+
+    it('leaves a non-grouped alert query unfiltered', async () => {
+      const clickhouseClient = makeClient();
+
+      await renderWith({ view: makeSearchView(), clickhouseClient });
+
+      expect(queriedSql(clickhouseClient)[0]).not.toContain('toString(');
+    });
+  });
+
+  describe('Slack (Advanced) delivery', () => {
+    const webhookId = '507f1f77bcf86cd799439011';
+    const advancedWebhook = {
+      _id: { toString: () => webhookId },
+      name: 'advanced',
+      service: WebhookService.SlackAdvanced,
+      url: 'https://hooks.slack.com/services/T0/B0/XXXX',
+    };
+    const plainWebhook = {
+      ...advancedWebhook,
+      service: WebhookService.Slack,
+    };
+
+    const viewWithChannel = (
+      overrides: Partial<AlertMessageTemplateDefaultView> = {},
+    ) => {
+      const view = groupedView(overrides);
+      return {
+        ...view,
+        alert: { ...view.alert, channel: { type: 'webhook', webhookId } },
+      } as AlertMessageTemplateDefaultView;
+    };
+
+    const lastSlackPayload = () => {
+      const calls = (slack.postMessageToWebhook as jest.Mock).mock.calls;
+      return calls[calls.length - 1][1];
+    };
+
+    beforeEach(() => {
+      (slack.postMessageToWebhook as jest.Mock).mockClear();
+    });
+
+    it('sends Block Kit blocks rather than a single markdown section', async () => {
+      await renderWith({
+        view: viewWithChannel(),
+        clickhouseClient: makeClient(),
+        teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
+      });
+
+      const blocks = lastSlackPayload().blocks;
+      expect(blocks.length).toBeGreaterThan(1);
+      expect(blocks[blocks.length - 1].type).toBe('context');
+    });
+
+    it('includes the display fields of a representative row of the group', async () => {
+      const view = viewWithChannel();
+      await renderWith({
+        view: {
+          ...view,
+          alert: {
+            ...view.alert,
+            displayFields: "SpanAttributes['exception.message']",
+          },
+        },
+        clickhouseClient: makeClient({
+          "SpanAttributes['exception.message']": 'connection refused',
+        }),
+        teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
+      });
+
+      expect(JSON.stringify(lastSlackPayload().blocks)).toContain(
+        'connection refused',
+      );
+    });
+
+    it('scopes the representative-row query to the group', async () => {
+      const clickhouseClient = makeClient({ ServiceName: 'api' });
+      const view = viewWithChannel();
+
+      await renderWith({
+        view: {
+          ...view,
+          alert: { ...view.alert, displayFields: 'ServiceName' },
+        },
+        clickhouseClient,
+        teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
+      });
+
+      const sampleRowQuery = queriedSql(clickhouseClient)[1];
+      expect(sampleRowQuery).toContain("toString(ServiceName) = 'api'");
+    });
+
+    it('links to the group-scoped search', async () => {
+      await renderWith({
+        view: viewWithChannel(),
+        clickhouseClient: makeClient(),
+        teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
+      });
+
+      expect(JSON.stringify(lastSlackPayload().blocks)).toContain(
+        'View this group in HyperDX',
+      );
+    });
+
+    it('does not query for a representative row when no display fields are set', async () => {
+      const clickhouseClient = makeClient();
+
+      await renderWith({
+        view: viewWithChannel(),
+        clickhouseClient,
+        teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
+      });
+
+      // Only the sample-log query for the message body.
+      expect(clickhouseClient.query).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves the plain Slack service on the single-section layout', async () => {
+      const view = viewWithChannel();
+
+      await renderWith({
+        view: {
+          ...view,
+          alert: {
+            ...view.alert,
+            displayFields: "SpanAttributes['exception.message']",
+          },
+        },
+        clickhouseClient: makeClient({
+          "SpanAttributes['exception.message']": 'connection refused',
+        }),
+        teamWebhooksById: new Map([[webhookId, plainWebhook as any]]),
+      });
+
+      const blocks = lastSlackPayload().blocks;
+      expect(blocks).toHaveLength(1);
+      expect(JSON.stringify(blocks)).not.toContain('connection refused');
+    });
+  });
+});
 
 describe('renderAlertTemplate', () => {
   describe('saved search alerts', () => {

@@ -17,6 +17,7 @@ import {
   SearchConditionLanguage,
   validateAlertScheduleOffsetMinutes,
   validateAlertThresholdMax,
+  WebhookService,
   zAlertChannel,
 } from '@hyperdx/common-utils/dist/types';
 import {
@@ -64,6 +65,7 @@ import { AlertHistoryCardList } from './components/alerts/AlertHistoryCards';
 import { AlertScheduleFields } from './components/AlertScheduleFields';
 import { AlertStatusIcon } from './components/AlertStatusIcon';
 import { getStoredLanguage } from './components/SearchInput/SearchWhereInput';
+import { webhookSupportsDisplayFields } from './utils/alertDisplayFields';
 import { getWebhookChannelIcon } from './utils/webhookIcons';
 import api from './api';
 import { AlertWithCreatedBy, SearchConfig } from './types';
@@ -156,6 +158,14 @@ const AlertForm = ({
     name: 'scheduleOffsetMinutes',
   });
   const groupByValue = useWatch({ control, name: 'groupBy' });
+  const webhookId = useWatch({ control, name: 'channel.webhookId' });
+  const { data: webhooks } = api.useWebhooks(Object.values(WebhookService));
+  // Only the advanced Slack service renders display fields, so the input stays
+  // hidden rather than offering a setting other channels ignore.
+  const showDisplayFields = webhookSupportsDisplayFields(
+    webhooks?.data,
+    webhookId,
+  );
   const threshold = useWatch({ control, name: 'threshold' });
   const thresholdMax = useWatch({ control, name: 'thresholdMax' });
   const numConsecutiveWindows = useWatch({
@@ -304,6 +314,24 @@ const AlertForm = ({
             {t('searchModal.sendTo')}
           </Text>
           <AlertChannelForm control={control} type={channelType} />
+          {showDisplayFields && (
+            <>
+              <Text size="xxs" opacity={0.5} mb={4} mt="xs">
+                {t('searchModal.displayFields')}
+              </Text>
+              <SQLInlineEditorControlled
+                tableConnection={tcFromSource(source)}
+                control={control}
+                name={`displayFields`}
+                placeholder={t('searchModal.displayFieldsPlaceholder')}
+                disableKeywordAutocomplete
+                size="xs"
+              />
+              <Text size="xxs" opacity={0.5} mt={4}>
+                {t('searchModal.displayFieldsHint')}
+              </Text>
+            </>
+          )}
           <AlertNoteField control={control} name="note" />
           {groupBy &&
             (thresholdType === AlertThresholdType.BELOW ||

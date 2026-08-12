@@ -117,6 +117,10 @@ export const alerts = {
     windowOffset: 'from each {{interval}} window',
     groupedBy: 'grouped by',
     sqlColumns: 'SQL Columns',
+    displayFields: 'fields to include in the message',
+    displayFieldsPlaceholder: "SpanAttributes['exception.message']",
+    displayFieldsHint:
+      'Read from the most recent row of the group that fired. Slack (Advanced) only.',
     sendTo: 'Send to',
     groupedWarning:
       'Warning: Alerts with this threshold type and a “grouped by” value will not alert for periods with no data for a group.',

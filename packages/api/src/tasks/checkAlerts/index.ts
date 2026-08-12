@@ -396,6 +396,7 @@ const fireChannelEvent = async ({
       channel: alert.channel,
       dashboardId: dashboard?.id,
       groupBy: alert.groupBy,
+      displayFields: alert.displayFields,
       interval: alert.interval,
       ...(alert.scheduleOffsetMinutes != null && {
         scheduleOffsetMinutes: alert.scheduleOffsetMinutes,
@@ -414,6 +415,7 @@ const fireChannelEvent = async ({
       tileId: alert.tileId,
     },
     attributes: attributesNested,
+    attributesFlat: attributes,
     dashboard,
     endTime,
     granularity: `${windowSizeInMins} minute`,

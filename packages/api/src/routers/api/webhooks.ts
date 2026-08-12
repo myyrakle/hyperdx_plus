@@ -13,8 +13,10 @@ import { validateRequest } from 'zod-express-middleware';
 
 import Alert, { AlertState } from '@/models/alert';
 import Webhook, { WebhookService } from '@/models/webhook';
+import { makeMessageField } from '@/tasks/checkAlerts/message';
 import {
   handleSendGenericWebhook,
+  handleSendSlackAdvancedWebhook,
   handleSendSlackWebhook,
 } from '@/tasks/checkAlerts/template';
 import { isDuplicateKeyError } from '@/utils/errors';
@@ -459,7 +461,28 @@ router.post(
         eventId: 'test-event-id',
       };
 
-      if (service === WebhookService.Slack) {
+      if (service === WebhookService.SlackAdvanced) {
+        // Send representative parts so the test message shows the structured
+        // layout this service exists for, not the plain-text fallback.
+        await handleSendSlackAdvancedWebhook(testWebhook, {
+          ...testMessage,
+          parts: {
+            metricValue: '12',
+            thresholdText:
+              'lines found, which exceeds the threshold of 5 lines',
+            totalCount: 12,
+            timeRangeText: 'Time Range (UTC): [test window)',
+            group: [makeMessageField('error_group_id', 'example-group-id')],
+            sampleFields: [
+              makeMessageField('exception.message', 'Example error message'),
+              makeMessageField(
+                'exception.stacktrace',
+                'at example.handler(app.ts:42)\nat example.middleware(app.ts:17)',
+              ),
+            ],
+          },
+        });
+      } else if (service === WebhookService.Slack) {
         await handleSendSlackWebhook(testWebhook, testMessage);
       } else if (
         service === WebhookService.Generic ||

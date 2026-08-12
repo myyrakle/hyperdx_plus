@@ -1,6 +1,7 @@
 import {
   AlertSource,
   AlertThresholdType,
+  WebhookService,
 } from '@hyperdx/common-utils/dist/types';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
@@ -31,6 +32,9 @@ const makeAlert = (id: string) => ({
 
 const firstAlert = makeAlert('6a5163af632ecadec80ec00e');
 const secondAlert = makeAlert('aaaa1111bbbb2222cccc3333');
+
+// Reassigned per test to vary the service of the alert's destination webhook.
+let webhooks: Array<{ _id: string; service: WebhookService }> = [];
 
 const savedSearch = {
   _id: 'saved-search-id',
@@ -64,6 +68,7 @@ jest.mock('@/api', () => ({
         data: [firstAlert, secondAlert].find(a => a.id === id) ?? firstAlert,
       },
     }),
+    useWebhooks: () => ({ data: { data: webhooks }, refetch: jest.fn() }),
   },
 }));
 
@@ -123,6 +128,52 @@ describe('DBSearchPageAlertModal', () => {
     createAlertMutateAsync.mockClear();
     updateAlertMutateAsync.mockClear();
     deleteAlertMutateAsync.mockClear();
+    webhooks = [];
+  });
+
+  describe('display fields input', () => {
+    const sqlEditorCount = () =>
+      screen.queryAllByTestId('sql-inline-editor').length;
+
+    /**
+     * The modal opens on the "New Alert" tab, which has no destination yet.
+     * Select an existing alert so its webhook decides what the form shows.
+     */
+    const openExistingAlert = async () => {
+      renderModal();
+      fireEvent.click(await screen.findByRole('tab', { name: /Alert 1/ }));
+    };
+
+    it('is offered when the alert goes to a Slack (Advanced) webhook', async () => {
+      webhooks = [{ _id: 'webhook-id', service: WebhookService.SlackAdvanced }];
+
+      await openExistingAlert();
+
+      // The group-by editor plus the display-fields editor.
+      await waitFor(() => expect(sqlEditorCount()).toBe(2));
+    });
+
+    it('is hidden for services that ignore display fields', async () => {
+      webhooks = [{ _id: 'webhook-id', service: WebhookService.Slack }];
+
+      await openExistingAlert();
+
+      expect(sqlEditorCount()).toBe(1);
+    });
+
+    it('is hidden while the webhook list is still empty', async () => {
+      await openExistingAlert();
+
+      expect(sqlEditorCount()).toBe(1);
+    });
+
+    it('is hidden on the new-alert tab, which has no destination yet', () => {
+      webhooks = [{ _id: 'webhook-id', service: WebhookService.SlackAdvanced }];
+
+      renderModal();
+
+      expect(sqlEditorCount()).toBe(1);
+    });
   });
 
   it('dispatches an update (PUT) with the id resolved from the selected alert tab', async () => {

@@ -649,6 +649,9 @@ const zChannel = z.object({
 const zSavedSearchAlert = z.object({
   source: z.literal(AlertSource.SAVED_SEARCH),
   groupBy: z.string().optional(),
+  // Comma-separated SQL expressions rendered as labelled fields by the
+  // slack_advanced webhook service. See zSavedSearchAlert in common-utils.
+  displayFields: z.string().max(2048).optional(),
   savedSearchId: z.string().min(1),
 });
 

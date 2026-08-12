@@ -167,6 +167,9 @@ export const settings = {
     createTitle: 'Create Webhook',
     serviceType: 'Service Type',
     serviceSlack: 'Slack',
+    serviceSlackAdvanced: 'Slack (Advanced)',
+    serviceSlackAdvancedHint:
+      'Structured layout with labelled fields. Supports an alert’s display fields.',
     serviceIncidentIo: 'incident.io',
     serviceGeneric: 'Generic',
     name: 'Webhook Name',

@@ -361,9 +361,25 @@ export type StacktraceBreadcrumb = {
 // -------------------------
 export enum WebhookService {
   Slack = 'slack',
+  /**
+   * Slack incoming webhook rendered as structured Block Kit blocks instead of a
+   * single markdown section. Supports an alert's `displayFields`, which other
+   * services ignore.
+   */
+  SlackAdvanced = 'slack_advanced',
   Generic = 'generic',
   IncidentIO = 'incidentio',
 }
+
+/** Services delivered to a Slack incoming webhook URL. */
+export const SLACK_WEBHOOK_SERVICES: string[] = [
+  WebhookService.Slack,
+  WebhookService.SlackAdvanced,
+];
+
+export const isSlackWebhookService = (
+  service: WebhookService | string | undefined | null,
+): boolean => service != null && SLACK_WEBHOOK_SERVICES.includes(service);
 
 /**
  * Base webhook schema (matches backend IWebhook but with JSON-serialized types).
@@ -492,6 +508,12 @@ export const zAlertChannel = z.object({
 export const zSavedSearchAlert = z.object({
   source: z.literal(AlertSource.SAVED_SEARCH),
   groupBy: z.string().optional(),
+  /**
+   * Comma-separated SQL expressions pulled from a representative row of the
+   * alerting group and rendered as labelled fields in the notification.
+   * Only the `slack_advanced` webhook service renders these.
+   */
+  displayFields: z.string().optional(),
   savedSearchId: z.string().min(1),
 });
 
