@@ -15,6 +15,6 @@ export const webhookSupportsDisplayFields = (
   }
   return (
     webhooks.find(webhook => webhook._id === webhookId)?.service ===
-    WebhookService.SlackAdvanced
+    WebhookService.SlackError
   );
 };

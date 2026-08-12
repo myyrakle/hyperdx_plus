@@ -304,9 +304,8 @@ export function WebhookForm({
               label={t('webhooks.serviceSlack')}
             />
             <Radio
-              value={WebhookService.SlackAdvanced}
-              label={t('webhooks.serviceSlackAdvanced')}
-              description={t('webhooks.serviceSlackAdvancedHint')}
+              value={WebhookService.SlackError}
+              label={t('webhooks.serviceSlackError')}
             />
             <Radio
               value={WebhookService.IncidentIO}

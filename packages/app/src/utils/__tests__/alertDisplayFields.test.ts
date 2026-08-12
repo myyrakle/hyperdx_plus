@@ -4,12 +4,12 @@ import { webhookSupportsDisplayFields } from '@/utils/alertDisplayFields';
 
 const webhooks = [
   { _id: 'w-plain', service: WebhookService.Slack },
-  { _id: 'w-advanced', service: WebhookService.SlackAdvanced },
+  { _id: 'w-advanced', service: WebhookService.SlackError },
   { _id: 'w-generic', service: WebhookService.Generic },
 ];
 
 describe('webhookSupportsDisplayFields', () => {
-  it('is true for a Slack (Advanced) webhook', () => {
+  it('is true for a Slack (Error) webhook', () => {
     expect(webhookSupportsDisplayFields(webhooks, 'w-advanced')).toBe(true);
   });
 

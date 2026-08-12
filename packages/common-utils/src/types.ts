@@ -362,11 +362,12 @@ export type StacktraceBreadcrumb = {
 export enum WebhookService {
   Slack = 'slack',
   /**
-   * Slack incoming webhook rendered as structured Block Kit blocks instead of a
-   * single markdown section. Supports an alert's `displayFields`, which other
-   * services ignore.
+   * Slack incoming webhook aimed at error triage: structured Block Kit blocks
+   * inside a colour-coded attachment (red firing, green resolved) instead of a
+   * single markdown section. Supports an alert's `displayFields`, which every
+   * other service ignores.
    */
-  SlackAdvanced = 'slack_advanced',
+  SlackError = 'slack_error',
   Generic = 'generic',
   IncidentIO = 'incidentio',
 }
@@ -374,7 +375,7 @@ export enum WebhookService {
 /** Services delivered to a Slack incoming webhook URL. */
 export const SLACK_WEBHOOK_SERVICES: string[] = [
   WebhookService.Slack,
-  WebhookService.SlackAdvanced,
+  WebhookService.SlackError,
 ];
 
 export const isSlackWebhookService = (
@@ -511,7 +512,7 @@ export const zSavedSearchAlert = z.object({
   /**
    * Comma-separated SQL expressions pulled from a representative row of the
    * alerting group and rendered as labelled fields in the notification.
-   * Only the `slack_advanced` webhook service renders these.
+   * Only the `slack_error` webhook service renders these.
    */
   displayFields: z.string().optional(),
   savedSearchId: z.string().min(1),

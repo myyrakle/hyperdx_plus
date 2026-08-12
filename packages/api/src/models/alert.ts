@@ -75,7 +75,7 @@ export interface IAlert {
   /**
    * Comma-separated SQL expressions pulled from a representative row of the
    * alerting group and rendered as labelled fields in the notification.
-   * Only the `slack_advanced` webhook service renders these.
+   * Only the `slack_error` webhook service renders these.
    */
   displayFields?: string;
   savedSearch?: ObjectId;

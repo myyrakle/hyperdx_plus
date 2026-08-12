@@ -39,7 +39,7 @@ export const makeMessageField = (
 
 /**
  * Structured view of an alert notification, for channels that render layout
- * rather than a markdown blob. Only populated for the `slack_advanced` service.
+ * rather than a markdown blob. Only populated for the `slack_error` service.
  */
 export type AlertMessageParts = {
   /** Threshold-matched value, e.g. "12". */

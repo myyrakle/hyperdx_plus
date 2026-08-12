@@ -1,3 +1,5 @@
+import type { IncomingWebhookSendArguments } from '@slack/webhook';
+
 import { AlertState } from '@/models/alert';
 import {
   AlertMessageField,
@@ -48,17 +50,12 @@ const fieldsBlock = (fields: AlertMessageField[]) => {
   return { type: 'section' as const, fields: entries };
 };
 
-/**
- * Render an alert notification as Slack Block Kit blocks.
- *
- * Falls back to the plain single-section layout used by the `slack` service when
- * the message carries no structured parts, so a delivery is never dropped just
- * because the representative-row lookup failed.
- */
-export const buildSlackAdvancedBlocks = (message: Message): SlackBlocks => {
+const buildBlocks = (message: Message): SlackBlocks => {
   const titleText = `*<${message.hdxLink} | ${message.title}>*`;
   const { parts } = message;
 
+  // No structured parts means the representative-row lookup produced nothing;
+  // deliver the plain body rather than dropping the notification.
   if (!parts) {
     return [section(`${titleText}\n${message.body}`)];
   }
@@ -111,3 +108,23 @@ export const buildSlackAdvancedBlocks = (message: Message): SlackBlocks => {
 
   return blocks;
 };
+
+/**
+ * Render an alert notification for the error-oriented Slack service.
+ *
+ * The blocks are wrapped in a single attachment because Slack only draws the
+ * coloured left bar on attachments — top-level `blocks` cannot carry it. The
+ * colour is the at-a-glance state signal: red while firing, green once resolved.
+ */
+export const buildSlackErrorPayload = (
+  message: Message,
+): IncomingWebhookSendArguments => ({
+  // Fallback for notification previews and clients that do not render blocks.
+  text: message.title,
+  attachments: [
+    {
+      color: message.state === AlertState.OK ? 'good' : 'danger',
+      blocks: buildBlocks(message),
+    },
+  ],
+});

@@ -120,7 +120,7 @@ export const alerts = {
     displayFields: 'fields to include in the message',
     displayFieldsPlaceholder: "SpanAttributes['exception.message']",
     displayFieldsHint:
-      'Read from the most recent row of the group that fired. Slack (Advanced) only.',
+      'Read from the most recent row of the group that fired. Slack (Error) only.',
     sendTo: 'Send to',
     groupedWarning:
       'Warning: Alerts with this threshold type and a “grouped by” value will not alert for periods with no data for a group.',

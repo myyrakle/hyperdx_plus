@@ -52,21 +52,21 @@ const renderForm = () =>
     </QueryClientProvider>,
   );
 
-const advancedRadio = () =>
-  screen.getByRole('radio', { name: /Slack \(Advanced\)/i });
+const errorServiceRadio = () =>
+  screen.getByRole('radio', { name: /Slack \(Error\)/i });
 
-describe('WebhookForm Slack (Advanced) service', () => {
+describe('WebhookForm Slack (Error) service', () => {
   it('offers the service as a choice', () => {
     renderForm();
 
-    expect(advancedRadio()).toBeInTheDocument();
+    expect(errorServiceRadio()).toBeInTheDocument();
   });
 
   it('saves the selected service', async () => {
     const user = userEvent.setup();
     renderForm();
 
-    await user.click(advancedRadio());
+    await user.click(errorServiceRadio());
     await user.type(screen.getByTestId('webhook-name-input'), 'errors');
     await user.type(
       screen.getByTestId('webhook-url-input'),
@@ -76,7 +76,7 @@ describe('WebhookForm Slack (Advanced) service', () => {
 
     await waitFor(() => expect(saveMutate).toHaveBeenCalled());
     expect(saveMutate.mock.calls[0][0]).toMatchObject({
-      service: WebhookService.SlackAdvanced,
+      service: WebhookService.SlackError,
     });
   });
 
@@ -84,7 +84,7 @@ describe('WebhookForm Slack (Advanced) service', () => {
     const user = userEvent.setup();
     renderForm();
 
-    await user.click(advancedRadio());
+    await user.click(errorServiceRadio());
     await user.type(screen.getByTestId('webhook-name-input'), 'errors');
     await user.type(
       screen.getByTestId('webhook-url-input'),
@@ -102,7 +102,7 @@ describe('WebhookForm Slack (Advanced) service', () => {
     const user = userEvent.setup();
     renderForm();
 
-    await user.click(advancedRadio());
+    await user.click(errorServiceRadio());
 
     expect(screen.getByTestId('webhook-url-input')).toHaveAttribute(
       'placeholder',
@@ -114,7 +114,7 @@ describe('WebhookForm Slack (Advanced) service', () => {
     const user = userEvent.setup();
     renderForm();
 
-    await user.click(advancedRadio());
+    await user.click(errorServiceRadio());
 
     expect(screen.queryByText(/headers/i)).not.toBeInTheDocument();
   });

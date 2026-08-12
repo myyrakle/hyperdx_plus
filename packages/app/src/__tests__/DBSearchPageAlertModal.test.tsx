@@ -144,8 +144,8 @@ describe('DBSearchPageAlertModal', () => {
       fireEvent.click(await screen.findByRole('tab', { name: /Alert 1/ }));
     };
 
-    it('is offered when the alert goes to a Slack (Advanced) webhook', async () => {
-      webhooks = [{ _id: 'webhook-id', service: WebhookService.SlackAdvanced }];
+    it('is offered when the alert goes to a Slack (Error) webhook', async () => {
+      webhooks = [{ _id: 'webhook-id', service: WebhookService.SlackError }];
 
       await openExistingAlert();
 
@@ -168,7 +168,7 @@ describe('DBSearchPageAlertModal', () => {
     });
 
     it('is hidden on the new-alert tab, which has no destination yet', () => {
-      webhooks = [{ _id: 'webhook-id', service: WebhookService.SlackAdvanced }];
+      webhooks = [{ _id: 'webhook-id', service: WebhookService.SlackError }];
 
       renderModal();
 

@@ -16,7 +16,7 @@ import Webhook, { WebhookService } from '@/models/webhook';
 import { makeMessageField } from '@/tasks/checkAlerts/message';
 import {
   handleSendGenericWebhook,
-  handleSendSlackAdvancedWebhook,
+  handleSendSlackErrorWebhook,
   handleSendSlackWebhook,
 } from '@/tasks/checkAlerts/template';
 import { isDuplicateKeyError } from '@/utils/errors';
@@ -461,10 +461,10 @@ router.post(
         eventId: 'test-event-id',
       };
 
-      if (service === WebhookService.SlackAdvanced) {
+      if (service === WebhookService.SlackError) {
         // Send representative parts so the test message shows the structured
         // layout this service exists for, not the plain-text fallback.
-        await handleSendSlackAdvancedWebhook(testWebhook, {
+        await handleSendSlackErrorWebhook(testWebhook, {
           ...testMessage,
           parts: {
             metricValue: '12',

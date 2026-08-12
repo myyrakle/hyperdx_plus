@@ -293,12 +293,12 @@ describe('renderAlertTemplate group scoping', () => {
     });
   });
 
-  describe('Slack (Advanced) delivery', () => {
+  describe('Slack (Error) delivery', () => {
     const webhookId = '507f1f77bcf86cd799439011';
     const advancedWebhook = {
       _id: { toString: () => webhookId },
       name: 'advanced',
-      service: WebhookService.SlackAdvanced,
+      service: WebhookService.SlackError,
       url: 'https://hooks.slack.com/services/T0/B0/XXXX',
     };
     const plainWebhook = {
@@ -321,6 +321,9 @@ describe('renderAlertTemplate group scoping', () => {
       return calls[calls.length - 1][1];
     };
 
+    /** Blocks live inside the coloured attachment for this service. */
+    const lastSlackBlocks = () => lastSlackPayload().attachments[0].blocks;
+
     beforeEach(() => {
       (slack.postMessageToWebhook as jest.Mock).mockClear();
     });
@@ -332,9 +335,30 @@ describe('renderAlertTemplate group scoping', () => {
         teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
       });
 
-      const blocks = lastSlackPayload().blocks;
+      const blocks = lastSlackBlocks();
       expect(blocks.length).toBeGreaterThan(1);
       expect(blocks[blocks.length - 1].type).toBe('context');
+    });
+
+    it('colours a firing alert red', async () => {
+      await renderWith({
+        view: viewWithChannel(),
+        clickhouseClient: makeClient(),
+        teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
+      });
+
+      expect(lastSlackPayload().attachments[0].color).toBe('danger');
+    });
+
+    it('colours a resolved alert green', async () => {
+      await renderWith({
+        view: viewWithChannel(),
+        clickhouseClient: makeClient(),
+        state: AlertState.OK,
+        teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
+      });
+
+      expect(lastSlackPayload().attachments[0].color).toBe('good');
     });
 
     it('includes the display fields of a representative row of the group', async () => {
@@ -353,9 +377,7 @@ describe('renderAlertTemplate group scoping', () => {
         teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
       });
 
-      expect(JSON.stringify(lastSlackPayload().blocks)).toContain(
-        'connection refused',
-      );
+      expect(JSON.stringify(lastSlackBlocks())).toContain('connection refused');
     });
 
     it('scopes the representative-row query to the group', async () => {
@@ -382,7 +404,7 @@ describe('renderAlertTemplate group scoping', () => {
         teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
       });
 
-      expect(JSON.stringify(lastSlackPayload().blocks)).toContain(
+      expect(JSON.stringify(lastSlackBlocks())).toContain(
         'View this group in HyperDX',
       );
     });

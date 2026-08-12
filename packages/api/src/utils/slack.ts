@@ -14,6 +14,8 @@ export function postMessageToWebhook(
       webhook.send({
         text: message.text,
         blocks: message.blocks,
+        // Attachments carry the coloured left bar that signals alert vs resolved.
+        attachments: message.attachments,
       }),
     { retryOnlyOnStatus: [429] },
   );

@@ -51,7 +51,7 @@ import {
   AlertProvider,
   PopulatedAlertChannel,
 } from '@/tasks/checkAlerts/providers';
-import { buildSlackAdvancedBlocks } from '@/tasks/checkAlerts/providers/slackAdvanced';
+import { buildSlackErrorPayload } from '@/tasks/checkAlerts/providers/slackError';
 import { fetchGroupSampleFields } from '@/tasks/checkAlerts/sampleRow';
 import { escapeJsonString, unflattenObject } from '@/tasks/util';
 import { truncateString } from '@/utils/common';
@@ -213,8 +213,8 @@ const notifyChannel = async ({
     case 'webhook': {
       const webhook = channel.channel;
       // TODO: migrate to use handleSendGenericWebhook so templates can be used
-      if (webhook.service === WebhookService.SlackAdvanced) {
-        await handleSendSlackAdvancedWebhook(webhook, message);
+      if (webhook.service === WebhookService.SlackError) {
+        await handleSendSlackErrorWebhook(webhook, message);
       } else if (webhook.service === WebhookService.Slack) {
         await handleSendSlackWebhook(webhook, message);
       } else if (
@@ -326,7 +326,7 @@ export const handleSendSlackWebhook = async (
   }
 };
 
-export const handleSendSlackAdvancedWebhook = async (
+export const handleSendSlackErrorWebhook = async (
   webhook: IWebhook,
   message: Message,
 ) => {
@@ -334,24 +334,23 @@ export const handleSendSlackAdvancedWebhook = async (
   try {
     validateWebhookUrl(webhook);
 
-    await slack.postMessageToWebhook(webhook.url, {
-      // Fallback text for notification previews, which do not render blocks.
-      text: message.title,
-      blocks: buildSlackAdvancedBlocks(message),
-    });
+    await slack.postMessageToWebhook(
+      webhook.url,
+      buildSlackErrorPayload(message),
+    );
     webhookDeliveryCounter.add(1, {
-      service: WebhookService.SlackAdvanced,
+      service: WebhookService.SlackError,
       outcome: 'success',
     });
   } catch (e) {
     webhookDeliveryCounter.add(1, {
-      service: WebhookService.SlackAdvanced,
+      service: WebhookService.SlackError,
       outcome: 'error',
     });
     throw e;
   } finally {
     webhookDeliveryDuration.record(performance.now() - startedAt, {
-      service: WebhookService.SlackAdvanced,
+      service: WebhookService.SlackError,
     });
   }
 };
@@ -672,7 +671,7 @@ export const renderAlertTemplate = async ({
 
   /**
    * Structured message parts for channels that render layout rather than a
-   * markdown blob. Memoized and only awaited by the `slack_advanced` branch, so
+   * markdown blob. Memoized and only awaited by the `slack_error` branch, so
    * an alert with no such channel issues no extra query at all.
    */
   const resolveParts = _.once(
@@ -787,7 +786,7 @@ export const renderAlertTemplate = async ({
         // representative-row query is deferred until such a channel fires.
         const parts =
           channel.type === 'webhook' &&
-          channel.channel.service === WebhookService.SlackAdvanced
+          channel.channel.service === WebhookService.SlackError
             ? await resolveParts()
             : undefined;
 

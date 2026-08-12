@@ -20,8 +20,8 @@ const WEBHOOK_SERVICE_CONFIG: Record<WebhookService, ServiceConfig> = {
     icon: <IconBrandSlack size={16} />,
     order: 1,
   },
-  [WebhookService.SlackAdvanced]: {
-    name: 'Slack (Advanced)',
+  [WebhookService.SlackError]: {
+    name: 'Slack (Error)',
     icon: <IconBrandSlack size={16} />,
     order: 2,
   },
@@ -41,7 +41,7 @@ const WEBHOOK_SERVICE_CONFIG: Record<WebhookService, ServiceConfig> = {
 const CHANNEL_ICONS: Record<WebhookService, React.ReactElement> = {
   [WebhookService.Generic]: <IconLink size={16} />,
   [WebhookService.Slack]: <IconBrandSlack size={16} />,
-  [WebhookService.SlackAdvanced]: <IconBrandSlack size={16} />,
+  [WebhookService.SlackError]: <IconBrandSlack size={16} />,
   [WebhookService.IncidentIO]: <IncidentIOIcon width={16} />,
 } as const;
 

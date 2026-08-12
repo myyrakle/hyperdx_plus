@@ -170,9 +170,7 @@ export const settings = {
     createTitle: '웹훅 생성',
     serviceType: '서비스 타입',
     serviceSlack: 'Slack',
-    serviceSlackAdvanced: 'Slack (Advanced)',
-    serviceSlackAdvancedHint:
-      '필드에 라벨이 붙은 구조화된 형태로 보냅니다. 알림의 표시 필드를 지원합니다.',
+    serviceSlackError: 'Slack (Error)',
     serviceIncidentIo: 'incident.io',
     serviceGeneric: '일반',
     name: '웹훅 이름',
