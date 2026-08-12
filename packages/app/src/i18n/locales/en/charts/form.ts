@@ -89,7 +89,6 @@ export const alertEditor = {
   mentionHint:
     'Prepended when the alert fires. Resolutions never mention. Slack (Error) only.',
   displayFields: 'fields to include in the message',
-  displayFieldsPlaceholder: "SpanAttributes['exception.message']",
   displayFieldsHint:
     'Read from the most recent row of the group that fired. Slack (Error) only.',
   floatingPointNote:

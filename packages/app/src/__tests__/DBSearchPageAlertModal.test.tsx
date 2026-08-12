@@ -159,9 +159,6 @@ describe('DBSearchPageAlertModal', () => {
   });
 
   describe('display fields input', () => {
-    const sqlEditorCount = () =>
-      screen.queryAllByTestId('sql-inline-editor').length;
-
     /**
      * The modal opens on the "New Alert" tab, which has no destination yet.
      * Select an existing alert so its webhook decides what the form shows.
@@ -171,13 +168,16 @@ describe('DBSearchPageAlertModal', () => {
       fireEvent.click(await screen.findByRole('tab', { name: /Alert 1/ }));
     };
 
+    // The list starts empty, so the add button — not a row — is what proves the
+    // control is offered.
+    const addButton = () => screen.queryByTestId('add-display-field');
+
     it('is offered when the alert goes to a Slack (Error) webhook', async () => {
       webhooks = [{ _id: 'webhook-id', service: WebhookService.SlackError }];
 
       await openExistingAlert();
 
-      // The group-by editor plus the display-fields editor.
-      await waitFor(() => expect(sqlEditorCount()).toBe(2));
+      await waitFor(() => expect(addButton()).toBeInTheDocument());
     });
 
     it('is hidden for services that ignore display fields', async () => {
@@ -185,13 +185,13 @@ describe('DBSearchPageAlertModal', () => {
 
       await openExistingAlert();
 
-      expect(sqlEditorCount()).toBe(1);
+      expect(addButton()).not.toBeInTheDocument();
     });
 
     it('is hidden while the webhook list is still empty', async () => {
       await openExistingAlert();
 
-      expect(sqlEditorCount()).toBe(1);
+      expect(addButton()).not.toBeInTheDocument();
     });
 
     it('is hidden on the new-alert tab, which has no destination yet', () => {
@@ -199,7 +199,7 @@ describe('DBSearchPageAlertModal', () => {
 
       renderModal();
 
-      expect(sqlEditorCount()).toBe(1);
+      expect(addButton()).not.toBeInTheDocument();
     });
   });
 

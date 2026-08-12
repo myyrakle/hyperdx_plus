@@ -61,6 +61,7 @@ import { AlertNoteField } from './components/AlertNoteField';
 import { AlertPreviewChart } from './components/AlertPreviewChart';
 import { AlertChannelForm } from './components/Alerts';
 import { AckAlert } from './components/alerts/AckAlert';
+import { AlertDisplayFields } from './components/alerts/AlertDisplayFields';
 import { AlertHistoryCardList } from './components/alerts/AlertHistoryCards';
 import { AlertScheduleFields } from './components/AlertScheduleFields';
 import { AlertStatusIcon } from './components/AlertStatusIcon';
@@ -344,13 +345,10 @@ const AlertForm = ({
               <Text size="xxs" opacity={0.5} mb={4} mt="xs">
                 {t('searchModal.displayFields')}
               </Text>
-              <SQLInlineEditorControlled
-                tableConnection={tcFromSource(source)}
+              <AlertDisplayFields
                 control={control}
-                name={`displayFields`}
-                placeholder={t('searchModal.displayFieldsPlaceholder')}
-                disableKeywordAutocomplete
-                size="xs"
+                name="displayFields"
+                tableConnection={tcFromSource(source)}
               />
               <Text size="xxs" opacity={0.5} mt={4}>
                 {t('searchModal.displayFieldsHint')}

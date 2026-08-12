@@ -73,11 +73,11 @@ export interface IAlert {
   // SavedSearch alerts
   groupBy?: string;
   /**
-   * Comma-separated SQL expressions pulled from a representative row of the
-   * alerting group and rendered as labelled fields in the notification.
+   * Values pulled from a representative row of the alerting group and rendered
+   * as labelled fields in the notification.
    * Only the `slack_error` webhook service renders these.
    */
-  displayFields?: string;
+  displayFields?: { valueExpression: string; alias?: string }[];
   /**
    * Broadcast mention to prepend when the alert fires. Resolutions never carry
    * one. Only the `slack_error` webhook service renders this.
@@ -195,7 +195,13 @@ const AlertSchema = new Schema<IAlert>(
       required: false,
     },
     displayFields: {
-      type: String,
+      type: [
+        {
+          _id: false,
+          valueExpression: { type: String, required: true },
+          alias: { type: String, required: false },
+        },
+      ],
       required: false,
     },
     mention: {

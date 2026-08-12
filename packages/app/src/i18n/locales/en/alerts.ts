@@ -1,4 +1,11 @@
 export const alerts = {
+  displayFields: {
+    as: 'AS',
+    add: 'Add field',
+    remove: 'Remove field',
+    expressionPlaceholder: "SpanAttributes['code.stacktrace']",
+    aliasPlaceholder: 'label (optional)',
+  },
   note: {
     label: 'Note',
     placeholder:
@@ -122,7 +129,6 @@ export const alerts = {
     mentionHint:
       'Prepended when the alert fires. Resolutions never mention. Slack (Error) only.',
     displayFields: 'fields to include in the message',
-    displayFieldsPlaceholder: "SpanAttributes['exception.message']",
     displayFieldsHint:
       'Read from the most recent row of the group that fired. Slack (Error) only.',
     sendTo: 'Send to',

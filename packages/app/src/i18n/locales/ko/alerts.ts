@@ -2,6 +2,13 @@ import type { alerts as englishAlerts } from '@/i18n/locales/en/alerts';
 import type { DeepPartial } from '@/i18n/types';
 
 export const alerts = {
+  displayFields: {
+    as: 'AS',
+    add: '필드 추가',
+    remove: '필드 삭제',
+    expressionPlaceholder: "SpanAttributes['code.stacktrace']",
+    aliasPlaceholder: '라벨 (선택)',
+  },
   note: {
     label: '메모',
     placeholder:
@@ -125,7 +132,6 @@ export const alerts = {
     mentionHint:
       '알림이 발화할 때만 붙습니다. 해소 시에는 멘션하지 않습니다. Slack (Error) 전용입니다.',
     displayFields: '메시지에 포함할 필드',
-    displayFieldsPlaceholder: "SpanAttributes['exception.message']",
     displayFieldsHint:
       '발화한 그룹의 가장 최근 행에서 값을 읽습니다. Slack (Error) 전용입니다.',
     sendTo: '전송 대상',

@@ -368,7 +368,9 @@ describe('renderAlertTemplate group scoping', () => {
           ...view,
           alert: {
             ...view.alert,
-            displayFields: "SpanAttributes['exception.message']",
+            displayFields: [
+              { valueExpression: "SpanAttributes['exception.message']" },
+            ],
           },
         },
         clickhouseClient: makeClient({ __hdx_display_0: 'connection refused' }),
@@ -385,7 +387,10 @@ describe('renderAlertTemplate group scoping', () => {
       await renderWith({
         view: {
           ...view,
-          alert: { ...view.alert, displayFields: 'ServiceName' },
+          alert: {
+            ...view.alert,
+            displayFields: [{ valueExpression: 'ServiceName' }],
+          },
         },
         clickhouseClient,
         teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
@@ -438,7 +443,9 @@ describe('renderAlertTemplate group scoping', () => {
           ...view,
           alert: {
             ...view.alert,
-            displayFields: "SpanAttributes['exception.message']",
+            displayFields: [
+              { valueExpression: "SpanAttributes['exception.message']" },
+            ],
           },
         },
         clickhouseClient: makeClient({ __hdx_display_0: 'connection refused' }),
@@ -480,7 +487,9 @@ describe('renderAlertTemplate for tile alerts', () => {
       alert: {
         ...view.alert,
         channel: { type: 'webhook', webhookId },
-        displayFields: "SpanAttributes['exception.message']",
+        displayFields: [
+          { valueExpression: "SpanAttributes['exception.message']" },
+        ],
       },
       dashboard: { ...(view.dashboard as any), tiles: [groupedTile] },
       source: makeSearchView().source,

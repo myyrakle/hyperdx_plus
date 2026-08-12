@@ -37,10 +37,10 @@ import api from '@/api';
 import { AlertNoteField } from '@/components/AlertNoteField';
 import { AlertChannelForm } from '@/components/Alerts';
 import { AckAlert } from '@/components/alerts/AckAlert';
+import { AlertDisplayFields } from '@/components/alerts/AlertDisplayFields';
 import { AlertHistoryCardList } from '@/components/alerts/AlertHistoryCards';
 import { AlertScheduleFields } from '@/components/AlertScheduleFields';
 import { ChartEditorFormState } from '@/components/ChartEditor/types';
-import { SQLInlineEditorControlled } from '@/components/SQLEditor/SQLInlineEditor';
 import { optionsToSelectData } from '@/utils';
 import { webhookSupportsDisplayFields } from '@/utils/alertDisplayFields';
 import {
@@ -303,13 +303,10 @@ export function TileAlertEditor({
               <Text size="xxs" opacity={0.5} mb={4} mt="sm">
                 {t('alertEditor.displayFields')}
               </Text>
-              <SQLInlineEditorControlled
-                tableConnection={tableConnection}
+              <AlertDisplayFields
                 control={control}
                 name="alert.displayFields"
-                placeholder={t('alertEditor.displayFieldsPlaceholder')}
-                disableKeywordAutocomplete
-                size="xs"
+                tableConnection={tableConnection}
               />
               <Text size="xxs" opacity={0.5} mt={4}>
                 {t('alertEditor.displayFieldsHint')}

@@ -2,8 +2,8 @@ import { ResponseJSON } from '@clickhouse/client-common';
 import { ClickhouseClient } from '@hyperdx/common-utils/dist/clickhouse/node';
 import { Metadata } from '@hyperdx/common-utils/dist/core/metadata';
 import { renderChartConfig } from '@hyperdx/common-utils/dist/core/renderChartConfig';
-import { splitAndTrimWithBracket } from '@hyperdx/common-utils/dist/core/utils';
 import {
+  AlertDisplayField,
   BuilderChartConfigWithOptDateRange,
   ChartConfigWithOptDateRange,
   DisplayType,
@@ -42,7 +42,7 @@ export const fetchGroupSampleFields = async ({
 }: {
   aliasWith?: BuilderChartConfigWithOptDateRange['with'];
   clickhouseClient: ClickhouseClient;
-  displayFields?: string;
+  displayFields?: AlertDisplayField[];
   endTime: Date;
   groupFilterCondition?: string;
   metadata: Metadata;
@@ -51,10 +51,11 @@ export const fetchGroupSampleFields = async ({
   source: ISource;
   startTime: Date;
 }): Promise<AlertMessageField[]> => {
-  const expressions = displayFields
-    ? splitAndTrimWithBracket(displayFields).filter(Boolean)
-    : [];
-  if (expressions.length === 0) {
+  // A blank expression is a half-filled row in the form, not something to query.
+  const fields = (displayFields ?? []).filter(field =>
+    field.valueExpression.trim(),
+  );
+  if (fields.length === 0) {
     return [];
   }
 
@@ -74,8 +75,8 @@ export const fetchGroupSampleFields = async ({
     displayType: DisplayType.Search,
     dateRange: [startTime, endTime],
     from: source.from,
-    select: expressions.map((valueExpression, i) => ({
-      valueExpression,
+    select: fields.map((field, i) => ({
+      valueExpression: field.valueExpression.trim(),
       alias: aliasOf(i),
     })),
     where: query.where ?? '',
@@ -122,10 +123,11 @@ export const fetchGroupSampleFields = async ({
       return [];
     }
 
-    return expressions.map((expression, i) => {
+    return fields.map((field, i) => {
       const value = row[aliasOf(i)];
       return makeMessageField(
-        formatFieldLabel(expression),
+        // The configured label wins; without one, derive it from the expression.
+        field.alias?.trim() || formatFieldLabel(field.valueExpression.trim()),
         // A column the query did not return still gets a field, so a mismatch is
         // visible in the notification rather than silently dropped.
         value == null ? '' : `${value}`,

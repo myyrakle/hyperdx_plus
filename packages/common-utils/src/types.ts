@@ -599,6 +599,18 @@ export const scheduleStartAtSchema = z
 
 export const alertNoteSchema = z.string().min(1).max(4096).nullish();
 
+/**
+ * One value pulled from a representative row of the alerting group. `alias` is
+ * the label shown in the notification; without it a label is derived from the
+ * expression.
+ */
+export const AlertDisplayFieldSchema = z.object({
+  valueExpression: z.string(),
+  alias: z.string().optional(),
+});
+
+export type AlertDisplayField = z.infer<typeof AlertDisplayFieldSchema>;
+
 /** Broadcast mentions an alert can opt into, stored without Slack's syntax. */
 export const AlertMentionSchema = z.enum(['here', 'channel']);
 
@@ -631,11 +643,11 @@ export const AlertBaseObjectSchema = z.object({
     .optional(),
   numConsecutiveWindows: z.number().int().min(1).nullish(),
   /**
-   * Comma-separated SQL expressions pulled from a representative row of the
-   * alerting group and rendered as labelled fields in the notification.
+   * Values pulled from a representative row of the alerting group and rendered
+   * as labelled fields in the notification.
    * Only the `slack_error` webhook service renders these.
    */
-  displayFields: z.string().optional(),
+  displayFields: z.array(AlertDisplayFieldSchema).optional(),
   /**
    * Broadcast mention to prepend when the alert fires. Resolutions never carry
    * one. Only the `slack_error` webhook service renders this.

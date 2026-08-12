@@ -55,9 +55,6 @@ const renderEditor = () =>
     </MantineProvider>,
   );
 
-const sqlEditorCount = () =>
-  screen.queryAllByTestId('sql-inline-editor').length;
-
 beforeEach(() => {
   webhooks = [];
 
@@ -101,12 +98,16 @@ describe('TileAlertEditor mention', () => {
 });
 
 describe('TileAlertEditor display fields', () => {
+  // The list starts empty, so the add button — not a row — is what proves the
+  // control is offered.
+  const addButton = () => screen.queryByTestId('add-display-field');
+
   it('offers the input when the alert goes to a Slack (Error) webhook', () => {
     webhooks = [{ _id: 'webhook-id', service: WebhookService.SlackError }];
 
     renderEditor();
 
-    expect(sqlEditorCount()).toBe(1);
+    expect(addButton()).toBeInTheDocument();
   });
 
   it('is hidden for services that ignore display fields', () => {
@@ -114,12 +115,12 @@ describe('TileAlertEditor display fields', () => {
 
     renderEditor();
 
-    expect(sqlEditorCount()).toBe(0);
+    expect(addButton()).not.toBeInTheDocument();
   });
 
   it('is hidden while the webhook list is still empty', () => {
     renderEditor();
 
-    expect(sqlEditorCount()).toBe(0);
+    expect(addButton()).not.toBeInTheDocument();
   });
 });
