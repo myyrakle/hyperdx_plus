@@ -9,18 +9,18 @@ import {
 import { buildSlackErrorPayload } from '@/tasks/checkAlerts/providers/slackError';
 
 const baseParts: AlertMessageParts = {
-  metricValue: '12',
-  thresholdText: 'lines found, which exceeds the threshold of 5 lines',
-  totalCount: 12,
+  metricValue: '3',
+  thresholdText: 'meets or exceeds 1',
+  totalCount: 3,
   timeRangeText:
     'Time Range (UTC): [2026-08-12T00:00:00Z - 2026-08-12T00:05:00Z)',
   group: [makeMessageField('error_group_id', 'abc-123')],
-  sampleFields: [makeMessageField('exception.message', 'connection refused')],
+  sampleFields: [makeMessageField('StatusMessage', 'relation does not exist')],
   titleLink: 'http://app:8080/search?filters=x',
 };
 
 const makeMessage = (overrides: Partial<Message> = {}): Message => ({
-  hdxLink: 'http://app:8080/search/1',
+  hdxLink: 'http://app:8080/dashboards/d1',
   title: '🚨 Alert for "errors"',
   body: 'fallback body',
   state: AlertState.ALERT,
@@ -31,142 +31,153 @@ const makeMessage = (overrides: Partial<Message> = {}): Message => ({
   ...overrides,
 });
 
-/** The blocks Slack will render, which live inside the coloured attachment. */
-const blocksOf = (message: Message): any[] =>
-  (buildSlackErrorPayload(message).attachments?.[0].blocks ?? []) as any[];
+const attachmentsOf = (message: Message): any[] =>
+  (buildSlackErrorPayload(message).attachments ?? []) as any[];
 
-/** All mrkdwn text in a blocks payload, flattened for substring assertions. */
-const allText = (blocks: any[]): string =>
-  JSON.stringify(blocks.map(b => [b.text?.text, b.fields, b.elements]));
-
-const sectionsWithFields = (blocks: any[]) =>
-  blocks.filter(b => b.type === 'section' && Array.isArray(b.fields));
+const first = (message: Message) => attachmentsOf(message)[0];
+const last = (message: Message) => {
+  const all = attachmentsOf(message);
+  return all[all.length - 1];
+};
 
 describe('buildSlackErrorPayload', () => {
   describe('state colour', () => {
     it('marks a firing alert red', () => {
-      const payload = buildSlackErrorPayload(makeMessage());
-
-      expect(payload.attachments?.[0].color).toBe('danger');
+      expect(first(makeMessage()).color).toBe('danger');
     });
 
     it('marks a resolved alert green', () => {
-      const payload = buildSlackErrorPayload(
-        makeMessage({ state: AlertState.OK }),
+      expect(first(makeMessage({ state: AlertState.OK })).color).toBe('good');
+    });
+
+    it('colours every attachment so the bar reads as one block', () => {
+      const attachments = attachmentsOf(
+        makeMessage({
+          parts: {
+            ...baseParts,
+            sampleFields: [makeMessageField('code.stacktrace', 'a()\nb()')],
+          },
+        }),
       );
 
-      expect(payload.attachments?.[0].color).toBe('good');
-    });
-
-    it('colours the fallback layout too', () => {
-      // Slack only draws the coloured bar on an attachment, so the fallback
-      // must be wrapped as well or it loses the state signal entirely.
-      const payload = buildSlackErrorPayload(makeMessage({ parts: undefined }));
-
-      expect(payload.attachments?.[0].color).toBe('danger');
-      expect(payload.attachments?.[0].blocks).toHaveLength(1);
-    });
-
-    it('summarises the attachment for notification previews', () => {
-      expect(
-        buildSlackErrorPayload(makeMessage()).attachments?.[0].fallback,
-      ).toBe('🚨 Alert for "errors"');
-    });
-
-    it('sends no top-level text, which Slack would print above the attachment', () => {
-      // A top-level `text` renders as its own line before the attachment, so the
-      // title would appear twice.
-      expect(buildSlackErrorPayload(makeMessage()).text).toBeUndefined();
-    });
-
-    it('sends no top-level blocks, so the colour is never bypassed', () => {
-      expect(buildSlackErrorPayload(makeMessage()).blocks).toBeUndefined();
+      expect(attachments.length).toBeGreaterThan(1);
+      expect(attachments.every(a => a.color === 'danger')).toBe(true);
     });
   });
 
-  it('links the title in the first block', () => {
-    expect(blocksOf(makeMessage())[0]).toEqual({
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: '*<http://app:8080/search?filters=x | 🚨 Alert for "errors">*',
-      },
+  describe('mention', () => {
+    const withMention = (mention: string) =>
+      buildSlackErrorPayload(
+        makeMessage({ parts: { ...baseParts, mention } as any }),
+      );
+
+    it('goes in the top-level text, which is what Slack notifies on', () => {
+      // A broadcast inside an attachment renders but does not reliably notify.
+      expect(withMention('<!here>').text).toBe('<!here>');
+    });
+
+    it('stays out of the attachments', () => {
+      const payload = withMention('<!here>');
+
+      expect(JSON.stringify(payload.attachments)).not.toContain('<!here>');
+    });
+
+    it('sends no top-level text when no mention is configured', () => {
+      expect(buildSlackErrorPayload(makeMessage()).text).toBeUndefined();
+    });
+
+    it('does not duplicate the title alongside the mention', () => {
+      // The title lives in the attachment; a title in `text` would print twice.
+      expect(withMention('<!here>').text).not.toContain('Alert for');
+    });
+  });
+
+  describe('payload shape', () => {
+    it('uses legacy attachment fields, which Slack colours', () => {
+      // Slack does not draw the coloured left bar for an attachment whose body
+      // is Block Kit `blocks`, so the content has to be title/text/fields.
+      expect(first(makeMessage()).blocks).toBeUndefined();
+    });
+
+    it('sends no top-level blocks', () => {
+      expect(buildSlackErrorPayload(makeMessage()).blocks).toBeUndefined();
+    });
+
+    it('summarises the attachment for notification previews', () => {
+      expect(first(makeMessage()).fallback).toBe('🚨 Alert for "errors"');
+    });
+
+    it('marks text and fields as markdown', () => {
+      expect(first(makeMessage()).mrkdwn_in).toEqual(['text', 'fields']);
+    });
+  });
+
+  describe('title', () => {
+    it('links the title at the group-scoped row list', () => {
+      const attachment = first(makeMessage());
+
+      expect(attachment.title).toBe('🚨 Alert for "errors"');
+      expect(attachment.title_link).toBe('http://app:8080/search?filters=x');
     });
   });
 
   it('states the metric value and threshold', () => {
-    expect(blocksOf(makeMessage())[1].text.text).toBe(
-      '*12* lines found, which exceeds the threshold of 5 lines',
-    );
+    expect(first(makeMessage()).text).toContain('*3* meets or exceeds 1');
   });
 
-  it('renders group and short sample fields as labelled fields', () => {
-    const fields = sectionsWithFields(blocksOf(makeMessage())).flatMap(
-      b => b.fields,
-    );
-
-    expect(fields).toEqual([
-      { type: 'mrkdwn', text: '*error_group_id*\nabc-123' },
-      { type: 'mrkdwn', text: '*exception.message*\nconnection refused' },
+  it('renders group and short sample fields as two-column fields', () => {
+    expect(first(makeMessage()).fields).toEqual([
+      { title: 'error_group_id', value: 'abc-123', short: true },
+      { title: 'StatusMessage', value: 'relation does not exist', short: true },
     ]);
   });
 
-  it('renders a long field as its own code block after a divider', () => {
-    const stacktrace = 'at foo()\nat bar()\nat baz()';
-    const blocks = blocksOf(
-      makeMessage({
-        parts: {
-          ...baseParts,
-          sampleFields: [makeMessageField('exception.stacktrace', stacktrace)],
-        },
-      }),
-    );
+  describe('long values', () => {
+    const withStack = makeMessage({
+      parts: {
+        ...baseParts,
+        sampleFields: [makeMessageField('code.stacktrace', 'a()\nb()\nc()')],
+      },
+    });
 
-    const dividerIndex = blocks.findIndex(b => b.type === 'divider');
-    expect(dividerIndex).toBeGreaterThan(-1);
-    expect(blocks[dividerIndex + 1].text.text).toBe(
-      '*exception.stacktrace*\n```\nat foo()\nat bar()\nat baz()\n```',
-    );
+    it('gets its own attachment with a code block', () => {
+      const stack = attachmentsOf(withStack).find(a =>
+        a.text?.includes('code.stacktrace'),
+      );
+
+      expect(stack.text).toBe('*code.stacktrace*\n```\na()\nb()\nc()\n```');
+    });
+
+    it('stays out of the two-column fields', () => {
+      expect(first(withStack).fields).toEqual([
+        { title: 'error_group_id', value: 'abc-123', short: true },
+      ]);
+    });
   });
 
-  it('does not put long fields in the two-column fields block', () => {
-    const fields = sectionsWithFields(
-      blocksOf(
+  describe('footer', () => {
+    it('carries the time range and event count', () => {
+      expect(last(makeMessage()).footer).toBe(
+        'Time Range (UTC): [2026-08-12T00:00:00Z - 2026-08-12T00:05:00Z) · 3 events',
+      );
+    });
+
+    it('sits on the last attachment when long values follow', () => {
+      const attachments = attachmentsOf(
         makeMessage({
           parts: {
             ...baseParts,
-            sampleFields: [
-              makeMessageField('exception.stacktrace', 'at foo()\nat bar()'),
-            ],
+            sampleFields: [makeMessageField('code.stacktrace', 'a()\nb()')],
           },
         }),
-      ),
-    ).flatMap(b => b.fields);
+      );
 
-    expect(fields).toEqual([
-      { type: 'mrkdwn', text: '*error_group_id*\nabc-123' },
-    ]);
-  });
+      expect(attachments[0].footer).toBeUndefined();
+      expect(attachments[attachments.length - 1].footer).toContain('3 events');
+    });
 
-  it('ends with a context block carrying the time range and event count', () => {
-    const blocks = blocksOf(makeMessage());
-    const context = blocks[blocks.length - 1];
-
-    expect(context.type).toBe('context');
-    expect(context.elements[0].text).toBe(
-      'Time Range (UTC): [2026-08-12T00:00:00Z - 2026-08-12T00:05:00Z) · 12 events',
-    );
-  });
-
-  it('points the title at the group-scoped row list', () => {
-    expect(blocksOf(makeMessage())[0].text.text).toContain(
-      'http://app:8080/search?filters=x',
-    );
-  });
-
-  it('keeps the alert own view reachable from the footer', () => {
-    const blocks = blocksOf(
-      makeMessage({
+    it('links the alert own view when it differs from the title', () => {
+      const message = makeMessage({
         parts: {
           ...baseParts,
           originLink: {
@@ -174,89 +185,107 @@ describe('buildSlackErrorPayload', () => {
             label: 'Open chart',
           },
         },
-      }),
-    );
+      });
 
-    expect(allText(blocks)).toContain(
-      '<http://app:8080/dashboards/d1 | Open chart>',
-    );
-  });
+      expect(last(message).text).toContain(
+        '<http://app:8080/dashboards/d1 | Open chart>',
+      );
+    });
 
-  it('omits the footer link when the title already goes there', () => {
-    expect(allText(blocksOf(makeMessage()))).not.toContain('Open chart');
+    it('puts that link below the fields, not above them', () => {
+      // Legacy attachments always render `fields` after `text`, so a link left
+      // in the head attachment's text would sit above the group values.
+      const message = makeMessage({
+        parts: {
+          ...baseParts,
+          originLink: {
+            url: 'http://app:8080/dashboards/d1',
+            label: 'Open chart',
+          },
+        },
+      });
+      const attachments = attachmentsOf(message);
+      const withFields = attachments.findIndex(a => a.fields?.length);
+      const withLink = attachments.findIndex(a =>
+        a.text?.includes('Open chart'),
+      );
+
+      expect(withLink).toBeGreaterThan(withFields);
+    });
+
+    it('omits that link when the title already goes there', () => {
+      expect(
+        attachmentsOf(makeMessage())
+          .map(a => a.text ?? '')
+          .join(''),
+      ).not.toContain('Open chart');
+    });
   });
 
   describe('resolved alerts', () => {
     const resolved = makeMessage({ state: AlertState.OK });
 
     it('says the alert resolved instead of restating the metric', () => {
-      expect(blocksOf(resolved)[1].text.text).toBe(
-        'The alert has been resolved.',
-      );
+      expect(first(resolved).text).toContain('The alert has been resolved.');
     });
 
     it('drops sample fields but keeps the group', () => {
-      const fields = sectionsWithFields(blocksOf(resolved)).flatMap(
-        b => b.fields,
-      );
-
-      expect(fields).toEqual([
-        { type: 'mrkdwn', text: '*error_group_id*\nabc-123' },
+      expect(first(resolved).fields).toEqual([
+        { title: 'error_group_id', value: 'abc-123', short: true },
       ]);
     });
   });
 
   describe('Slack payload limits', () => {
-    it('truncates a code block that exceeds the per-block text limit', () => {
-      const blocks = blocksOf(
+    it('truncates a code block that exceeds the per-attachment text limit', () => {
+      const attachments = attachmentsOf(
         makeMessage({
           parts: {
             ...baseParts,
             sampleFields: [
-              makeMessageField('exception.stacktrace', 'x\n'.repeat(4000)),
+              makeMessageField('code.stacktrace', 'x\n'.repeat(4000)),
             ],
           },
         }),
       );
+      const stack = attachments.find(a => a.text?.includes('code.stacktrace'));
 
-      const codeBlock = blocks.find(b =>
-        b.text?.text?.includes('exception.stacktrace'),
-      );
-
-      expect(codeBlock.text.text.length).toBeLessThanOrEqual(
-        SLACK_MAX_TEXT_LENGTH,
-      );
-      expect(codeBlock.text.text).toContain('…(truncated)');
+      expect(stack.text.length).toBeLessThanOrEqual(SLACK_MAX_TEXT_LENGTH);
+      expect(stack.text).toContain('…(truncated)');
     });
 
-    it('caps the fields block and reports how many were dropped', () => {
+    it('caps the fields list and reports how many were dropped', () => {
       const many = Array.from({ length: SLACK_MAX_FIELDS + 4 }, (_, i) =>
         makeMessageField(`field_${i}`, `value_${i}`),
       );
-      const fields = sectionsWithFields(
-        blocksOf(
-          makeMessage({
-            parts: { ...baseParts, group: [], sampleFields: many },
-          }),
-        ),
-      ).flatMap(b => b.fields);
+      const fields = first(
+        makeMessage({
+          parts: { ...baseParts, group: [], sampleFields: many },
+        }),
+      ).fields;
 
       expect(fields).toHaveLength(SLACK_MAX_FIELDS);
-      expect(fields[SLACK_MAX_FIELDS - 1].text).toBe('…(5 more)');
+      expect(fields[SLACK_MAX_FIELDS - 1]).toEqual({
+        title: '…',
+        value: '(5 more)',
+        short: true,
+      });
     });
   });
 
   describe('without structured parts', () => {
-    it('falls back to the plain single-section layout', () => {
-      expect(blocksOf(makeMessage({ parts: undefined }))).toEqual([
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: '*<http://app:8080/search/1 | 🚨 Alert for "errors">*\nfallback body',
-          },
-        },
-      ]);
+    it('falls back to one coloured attachment with the plain body', () => {
+      const attachments = attachmentsOf(makeMessage({ parts: undefined }));
+
+      expect(attachments).toHaveLength(1);
+      expect(attachments[0]).toEqual({
+        fallback: '🚨 Alert for "errors"',
+        color: 'danger',
+        mrkdwn_in: ['text', 'fields'],
+        title: '🚨 Alert for "errors"',
+        title_link: 'http://app:8080/dashboards/d1',
+        text: 'fallback body',
+      });
     });
   });
 });

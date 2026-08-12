@@ -117,6 +117,10 @@ export const alerts = {
     windowOffset: 'from each {{interval}} window',
     groupedBy: 'grouped by',
     sqlColumns: 'SQL Columns',
+    mention: 'mention on alert',
+    mentionNone: 'no mention',
+    mentionHint:
+      'Prepended when the alert fires. Resolutions never mention. Slack (Error) only.',
     displayFields: 'fields to include in the message',
     displayFieldsPlaceholder: "SpanAttributes['exception.message']",
     displayFieldsHint:

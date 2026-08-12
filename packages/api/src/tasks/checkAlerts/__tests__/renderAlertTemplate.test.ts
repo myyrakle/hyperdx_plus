@@ -321,23 +321,23 @@ describe('renderAlertTemplate group scoping', () => {
       return calls[calls.length - 1][1];
     };
 
-    /** Blocks live inside the coloured attachment for this service. */
-    const lastSlackBlocks = () => lastSlackPayload().attachments[0].blocks;
+    /** All attachment text, flattened; the service uses legacy attachments. */
+    const lastSlackText = () => JSON.stringify(lastSlackPayload().attachments);
 
     beforeEach(() => {
       (slack.postMessageToWebhook as jest.Mock).mockClear();
     });
 
-    it('sends Block Kit blocks rather than a single markdown section', async () => {
+    it('sends a coloured attachment rather than a single markdown section', async () => {
       await renderWith({
         view: viewWithChannel(),
         clickhouseClient: makeClient(),
         teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
       });
 
-      const blocks = lastSlackBlocks();
-      expect(blocks.length).toBeGreaterThan(1);
-      expect(blocks[blocks.length - 1].type).toBe('context');
+      const attachments = lastSlackPayload().attachments;
+      expect(attachments[0].color).toBe('danger');
+      expect(attachments[0].fields.length).toBeGreaterThan(0);
     });
 
     it('colours a firing alert red', async () => {
@@ -375,7 +375,7 @@ describe('renderAlertTemplate group scoping', () => {
         teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
       });
 
-      expect(JSON.stringify(lastSlackBlocks())).toContain('connection refused');
+      expect(lastSlackText()).toContain('connection refused');
     });
 
     it('scopes the representative-row query to the group', async () => {
@@ -402,9 +402,9 @@ describe('renderAlertTemplate group scoping', () => {
         teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
       });
 
-      const titleText = lastSlackBlocks()[0].text.text;
-      expect(titleText).toContain('/search?');
-      expect(titleText).toContain('filters=');
+      const titleLink = lastSlackPayload().attachments[0].title_link;
+      expect(titleLink).toContain('/search?');
+      expect(titleLink).toContain('filters=');
     });
 
     it('keeps the full saved search reachable from the footer', async () => {
@@ -414,9 +414,7 @@ describe('renderAlertTemplate group scoping', () => {
         teamWebhooksById: new Map([[webhookId, advancedWebhook as any]]),
       });
 
-      const blocks = lastSlackBlocks();
-      const context = blocks[blocks.length - 1];
-      expect(context.elements[0].text).toContain('Open search');
+      expect(lastSlackText()).toContain('Open search');
     });
 
     it('does not query for a representative row when no display fields are set', async () => {
@@ -518,19 +516,64 @@ describe('renderAlertTemplate for tile alerts', () => {
     const calls = (slack.postMessageToWebhook as jest.Mock).mock.calls;
     return calls[calls.length - 1][1];
   };
-  const lastBlocks = () => lastPayload().attachments[0].blocks;
+  const lastText = () => JSON.stringify(lastPayload().attachments);
 
   beforeEach(() => {
     (slack.postMessageToWebhook as jest.Mock).mockClear();
   });
 
+  describe('mention', () => {
+    const renderWithMention = (
+      mention: 'here' | 'channel' | undefined,
+      state = AlertState.ALERT,
+    ) => {
+      const view = tileView();
+      return renderAlertTemplate({
+        alertProvider,
+        clickhouseClient: makeClient(),
+        metadata: mockMetadata,
+        state,
+        template: null,
+        title: 'Test Alert Title',
+        view: { ...view, alert: { ...view.alert, mention } },
+        teamWebhooksById: new Map([[webhookId, errorWebhook as any]]),
+      });
+    };
+
+    it('broadcasts to the channel members when the alert opts in', async () => {
+      await renderWithMention('here');
+
+      expect(lastPayload().text).toBe('<!here>');
+    });
+
+    it('supports the whole-channel broadcast', async () => {
+      await renderWithMention('channel');
+
+      expect(lastPayload().text).toBe('<!channel>');
+    });
+
+    it('stays quiet when the alert does not opt in', async () => {
+      await renderWithMention(undefined);
+
+      expect(lastPayload().text).toBeUndefined();
+    });
+
+    it('does not wake anyone on a resolution', async () => {
+      // A resolution is good news; paging people again would train them to
+      // mute the channel.
+      await renderWithMention('here', AlertState.OK);
+
+      expect(lastPayload().text).toBeUndefined();
+    });
+  });
+
   it('renders the structured layout rather than the plain fallback', async () => {
     await renderTile(makeClient());
 
-    // The fallback is a single section; the structured layout ends in a context.
-    const blocks = lastBlocks();
-    expect(blocks.length).toBeGreaterThan(1);
-    expect(blocks[blocks.length - 1].type).toBe('context');
+    // The fallback has no fields; the structured layout renders the group.
+    const attachments = lastPayload().attachments;
+    expect(attachments[0].fields.length).toBeGreaterThan(0);
+    expect(attachments[attachments.length - 1].footer).toContain('events');
   });
 
   it('colours the attachment by state', async () => {
@@ -544,14 +587,14 @@ describe('renderAlertTemplate for tile alerts', () => {
   it('shows the group value from the tile group-by', async () => {
     await renderTile(makeClient());
 
-    expect(JSON.stringify(lastBlocks())).toContain('boom');
+    expect(lastText()).toContain('boom');
   });
 
   it('includes the display fields of a representative row', async () => {
     // Keyed by the alias the query asks for, which is what ClickHouse returns.
     await renderTile(makeClient({ __hdx_display_0: 'connection refused' }));
 
-    expect(JSON.stringify(lastBlocks())).toContain('connection refused');
+    expect(lastText()).toContain('connection refused');
   });
 
   it('scopes the representative-row query to the group', async () => {
@@ -584,17 +627,16 @@ describe('renderAlertTemplate for tile alerts', () => {
   it('points the title at the group-filtered row list', async () => {
     await renderTile(makeClient());
 
-    const titleText = lastBlocks()[0].text.text;
-    expect(titleText).toContain('/search?');
-    expect(titleText).toContain('filters=');
+    const titleLink = lastPayload().attachments[0].title_link;
+    expect(titleLink).toContain('/search?');
+    expect(titleLink).toContain('filters=');
   });
 
   it('keeps the dashboard chart reachable from the footer', async () => {
     await renderTile(makeClient());
 
-    const context = lastBlocks()[lastBlocks().length - 1];
-    expect(context.elements[0].text).toContain('/dashboards/');
-    expect(context.elements[0].text).toContain('Open chart');
+    expect(lastText()).toContain('/dashboards/');
+    expect(lastText()).toContain('Open chart');
   });
 });
 

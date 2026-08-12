@@ -599,6 +599,11 @@ export const scheduleStartAtSchema = z
 
 export const alertNoteSchema = z.string().min(1).max(4096).nullish();
 
+/** Broadcast mentions an alert can opt into, stored without Slack's syntax. */
+export const AlertMentionSchema = z.enum(['here', 'channel']);
+
+export type AlertMention = z.infer<typeof AlertMentionSchema>;
+
 export const AlertBaseObjectSchema = z.object({
   id: z.string().optional(),
   interval: AlertIntervalSchema,
@@ -631,6 +636,11 @@ export const AlertBaseObjectSchema = z.object({
    * Only the `slack_error` webhook service renders these.
    */
   displayFields: z.string().optional(),
+  /**
+   * Broadcast mention to prepend when the alert fires. Resolutions never carry
+   * one. Only the `slack_error` webhook service renders this.
+   */
+  mention: AlertMentionSchema.optional(),
 });
 
 // Keep AlertBaseSchema as a ZodObject for backwards compatibility with

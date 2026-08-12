@@ -47,6 +47,7 @@ import {
   formatFieldLabel,
   makeMessageField,
   Message,
+  renderMention,
 } from '@/tasks/checkAlerts/message';
 import {
   AlertProvider,
@@ -746,6 +747,11 @@ export const renderAlertTemplate = async ({
         group: groupFields,
         sampleFields,
         titleLink,
+        // Resolutions never broadcast: waking people for good news trains them
+        // to mute the channel.
+        ...(!isAlertResolved(state) && {
+          mention: renderMention(alert.mention),
+        }),
         ...(titleLink !== originLink && {
           originLink: {
             url: originLink,

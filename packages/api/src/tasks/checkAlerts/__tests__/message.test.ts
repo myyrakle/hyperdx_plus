@@ -1,4 +1,4 @@
-import { formatFieldLabel } from '@/tasks/checkAlerts/message';
+import { formatFieldLabel, renderMention } from '@/tasks/checkAlerts/message';
 
 describe('formatFieldLabel', () => {
   it('uses a plain column name as-is', () => {
@@ -31,5 +31,25 @@ describe('formatFieldLabel', () => {
     expect(formatFieldLabel("SpanAttributes['x'] AS thing")).toBe(
       "SpanAttributes['x'] AS thing",
     );
+  });
+});
+
+describe('renderMention', () => {
+  it('renders the here broadcast', () => {
+    expect(renderMention('here')).toBe('<!here>');
+  });
+
+  it('renders the channel broadcast', () => {
+    expect(renderMention('channel')).toBe('<!channel>');
+  });
+
+  it('renders nothing when no mention is configured', () => {
+    expect(renderMention(undefined)).toBeUndefined();
+  });
+
+  it('renders nothing for an unrecognised value', () => {
+    // Stored data predating a value change should not emit a literal string
+    // that Slack would show as plain text.
+    expect(renderMention('everyone' as any)).toBeUndefined();
   });
 });

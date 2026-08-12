@@ -68,6 +68,38 @@ beforeEach(() => {
     );
 });
 
+describe('TileAlertEditor mention', () => {
+  const mentionSelect = () => screen.queryByTestId('alert-mention-select');
+
+  it('is offered when the alert goes to a Slack (Error) webhook', () => {
+    webhooks = [{ _id: 'webhook-id', service: WebhookService.SlackError }];
+
+    renderEditor();
+
+    expect(mentionSelect()).toBeInTheDocument();
+  });
+
+  it('offers no mention, here and channel', () => {
+    webhooks = [{ _id: 'webhook-id', service: WebhookService.SlackError }];
+
+    renderEditor();
+
+    expect(
+      Array.from(mentionSelect()!.querySelectorAll('option')).map(
+        o => (o as HTMLOptionElement).value,
+      ),
+    ).toEqual(['', 'here', 'channel']);
+  });
+
+  it('is hidden for services that ignore mentions', () => {
+    webhooks = [{ _id: 'webhook-id', service: WebhookService.Slack }];
+
+    renderEditor();
+
+    expect(mentionSelect()).not.toBeInTheDocument();
+  });
+});
+
 describe('TileAlertEditor display fields', () => {
   it('offers the input when the alert goes to a Slack (Error) webhook', () => {
     webhooks = [{ _id: 'webhook-id', service: WebhookService.SlackError }];

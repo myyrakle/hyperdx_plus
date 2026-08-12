@@ -78,6 +78,11 @@ export interface IAlert {
    * Only the `slack_error` webhook service renders these.
    */
   displayFields?: string;
+  /**
+   * Broadcast mention to prepend when the alert fires. Resolutions never carry
+   * one. Only the `slack_error` webhook service renders this.
+   */
+  mention?: 'here' | 'channel';
   savedSearch?: ObjectId;
 
   // Tile alerts
@@ -191,6 +196,11 @@ const AlertSchema = new Schema<IAlert>(
     },
     displayFields: {
       type: String,
+      required: false,
+    },
+    mention: {
+      type: String,
+      enum: ['here', 'channel'],
       required: false,
     },
 

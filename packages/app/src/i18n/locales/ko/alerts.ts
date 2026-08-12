@@ -120,6 +120,10 @@ export const alerts = {
     windowOffset: '{{interval}} 구간마다',
     groupedBy: '그룹 기준',
     sqlColumns: 'SQL 컬럼',
+    mention: '발화 시 멘션',
+    mentionNone: '멘션 없음',
+    mentionHint:
+      '알림이 발화할 때만 붙습니다. 해소 시에는 멘션하지 않습니다. Slack (Error) 전용입니다.',
     displayFields: '메시지에 포함할 필드',
     displayFieldsPlaceholder: "SpanAttributes['exception.message']",
     displayFieldsHint:

@@ -317,6 +317,31 @@ const AlertForm = ({
           {showDisplayFields && (
             <>
               <Text size="xxs" opacity={0.5} mb={4} mt="xs">
+                {t('searchModal.mention')}
+              </Text>
+              <Controller
+                control={control}
+                name="mention"
+                render={({ field }) => (
+                  <NativeSelect
+                    size="xs"
+                    data-testid="alert-mention-select"
+                    data={[
+                      { value: '', label: t('searchModal.mentionNone') },
+                      { value: 'here', label: '@here' },
+                      { value: 'channel', label: '@channel' },
+                    ]}
+                    value={field.value ?? ''}
+                    onChange={event =>
+                      field.onChange(event.currentTarget.value || undefined)
+                    }
+                  />
+                )}
+              />
+              <Text size="xxs" opacity={0.5} mt={4}>
+                {t('searchModal.mentionHint')}
+              </Text>
+              <Text size="xxs" opacity={0.5} mb={4} mt="xs">
                 {t('searchModal.displayFields')}
               </Text>
               <SQLInlineEditorControlled

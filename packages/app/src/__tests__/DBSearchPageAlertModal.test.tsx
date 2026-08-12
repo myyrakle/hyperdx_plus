@@ -131,6 +131,33 @@ describe('DBSearchPageAlertModal', () => {
     webhooks = [];
   });
 
+  describe('mention select', () => {
+    const openExistingAlert = async () => {
+      renderModal();
+      fireEvent.click(await screen.findByRole('tab', { name: /Alert 1/ }));
+    };
+
+    it('is offered when the alert goes to a Slack (Error) webhook', async () => {
+      webhooks = [{ _id: 'webhook-id', service: WebhookService.SlackError }];
+
+      await openExistingAlert();
+
+      await waitFor(() =>
+        expect(screen.getByTestId('alert-mention-select')).toBeInTheDocument(),
+      );
+    });
+
+    it('is hidden for services that ignore mentions', async () => {
+      webhooks = [{ _id: 'webhook-id', service: WebhookService.Slack }];
+
+      await openExistingAlert();
+
+      expect(
+        screen.queryByTestId('alert-mention-select'),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   describe('display fields input', () => {
     const sqlEditorCount = () =>
       screen.queryAllByTestId('sql-inline-editor').length;

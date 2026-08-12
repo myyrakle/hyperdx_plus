@@ -276,6 +276,31 @@ export function TileAlertEditor({
           {showDisplayFields && (
             <>
               <Text size="xxs" opacity={0.5} mb={4} mt="sm">
+                {t('alertEditor.mention')}
+              </Text>
+              <Controller
+                control={control}
+                name="alert.mention"
+                render={({ field }) => (
+                  <NativeSelect
+                    size="xs"
+                    data-testid="alert-mention-select"
+                    data={[
+                      { value: '', label: t('alertEditor.mentionNone') },
+                      { value: 'here', label: '@here' },
+                      { value: 'channel', label: '@channel' },
+                    ]}
+                    value={field.value ?? ''}
+                    onChange={event =>
+                      field.onChange(event.currentTarget.value || undefined)
+                    }
+                  />
+                )}
+              />
+              <Text size="xxs" opacity={0.5} mt={4}>
+                {t('alertEditor.mentionHint')}
+              </Text>
+              <Text size="xxs" opacity={0.5} mb={4} mt="sm">
                 {t('alertEditor.displayFields')}
               </Text>
               <SQLInlineEditorControlled

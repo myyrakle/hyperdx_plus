@@ -1,19 +1,9 @@
-import type { IncomingWebhookSendArguments } from '@slack/webhook';
-
 import { AlertState } from '@/models/alert';
 
-/**
- * Slack block payload type, derived from the webhook client rather than
- * imported from `@slack/types` (a transitive dependency).
- */
-export type SlackBlocks = NonNullable<IncomingWebhookSendArguments['blocks']>;
-
-/** Slack rejects a block whose text exceeds this length. */
+/** Slack truncates attachment text beyond this length. */
 export const SLACK_MAX_TEXT_LENGTH = 3000;
-/** Slack renders at most this many entries in a section's `fields` array. */
+/** Slack renders at most this many entries in an attachment's `fields` array. */
 export const SLACK_MAX_FIELDS = 10;
-/** Slack rejects a message with more blocks than this. */
-export const SLACK_MAX_BLOCKS = 50;
 
 /**
  * A value long enough that Slack's two-column `fields` layout would mangle it,
@@ -63,6 +53,11 @@ export type AlertMessageParts = {
    * `titleLink`, so the footer never repeats the title's destination.
    */
   originLink?: { url: string; label: string };
+  /**
+   * Pre-rendered Slack broadcast token (`<!here>`). Absent unless the alert opts
+   * in, and never set on a resolution.
+   */
+  mention?: string;
 };
 
 /**
@@ -74,6 +69,28 @@ export const formatFieldLabel = (expression: string): string => {
   const bracketedKey = expression.match(/\[\s*'([^']*)'\s*\]$/);
   return bracketedKey ? bracketedKey[1] : expression;
 };
+
+/**
+ * Broadcast mentions an alert can opt into. Stored as the bare name so the
+ * Slack-specific syntax stays in one place.
+ */
+export type AlertMention = 'here' | 'channel';
+
+const MENTION_TOKENS: Record<AlertMention, string> = {
+  here: '<!here>',
+  channel: '<!channel>',
+};
+
+/**
+ * Render a stored mention as its Slack token.
+ *
+ * An unrecognised value yields nothing rather than a literal string Slack would
+ * print as plain text — stored data can predate a change to the allowed values.
+ */
+export const renderMention = (
+  mention: AlertMention | undefined,
+): string | undefined =>
+  mention == null ? undefined : MENTION_TOKENS[mention];
 
 export interface Message {
   hdxLink: string;

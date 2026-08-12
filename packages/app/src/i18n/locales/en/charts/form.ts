@@ -84,6 +84,10 @@ export const alertEditor = {
   via: 'via',
   createdBy: 'Created by {{name}}',
   sendTo: 'Send to',
+  mention: 'mention on alert',
+  mentionNone: 'no mention',
+  mentionHint:
+    'Prepended when the alert fires. Resolutions never mention. Slack (Error) only.',
   displayFields: 'fields to include in the message',
   displayFieldsPlaceholder: "SpanAttributes['exception.message']",
   displayFieldsHint:

@@ -675,6 +675,9 @@ export const alertSchema = z
     // Comma-separated SQL expressions rendered as labelled fields by the
     // slack_error webhook service. Applies to both alert sources.
     displayFields: z.string().max(2048).optional(),
+    // Broadcast mention prepended when the alert fires, rendered only by the
+    // slack_error webhook service.
+    mention: z.enum(['here', 'channel']).optional(),
   })
   .and(zSavedSearchAlert.or(zTileAlert))
   .superRefine(validateAlertScheduleOffsetMinutes)
