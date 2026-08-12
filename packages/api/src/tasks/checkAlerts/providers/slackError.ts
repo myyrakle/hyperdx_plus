@@ -120,10 +120,12 @@ const buildBlocks = (message: Message): SlackBlocks => {
 export const buildSlackErrorPayload = (
   message: Message,
 ): IncomingWebhookSendArguments => ({
-  // Fallback for notification previews and clients that do not render blocks.
-  text: message.title,
+  // No top-level `text`: Slack renders it as its own line above the attachment,
+  // which would print the title twice. `fallback` covers the same need — plain
+  // text for mobile notifications and clients that do not render blocks.
   attachments: [
     {
+      fallback: message.title,
       color: message.state === AlertState.OK ? 'good' : 'danger',
       blocks: buildBlocks(message),
     },

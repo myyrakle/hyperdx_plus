@@ -67,10 +67,16 @@ describe('buildSlackErrorPayload', () => {
       expect(payload.attachments?.[0].blocks).toHaveLength(1);
     });
 
-    it('keeps a plain-text fallback for notification previews', () => {
-      expect(buildSlackErrorPayload(makeMessage()).text).toBe(
-        '🚨 Alert for "errors"',
-      );
+    it('summarises the attachment for notification previews', () => {
+      expect(
+        buildSlackErrorPayload(makeMessage()).attachments?.[0].fallback,
+      ).toBe('🚨 Alert for "errors"');
+    });
+
+    it('sends no top-level text, which Slack would print above the attachment', () => {
+      // A top-level `text` renders as its own line before the attachment, so the
+      // title would appear twice.
+      expect(buildSlackErrorPayload(makeMessage()).text).toBeUndefined();
     });
 
     it('sends no top-level blocks, so the colour is never bypassed', () => {
@@ -165,19 +171,19 @@ describe('buildSlackErrorPayload', () => {
           ...baseParts,
           originLink: {
             url: 'http://app:8080/dashboards/d1',
-            label: 'View chart',
+            label: 'Open chart',
           },
         },
       }),
     );
 
     expect(allText(blocks)).toContain(
-      '<http://app:8080/dashboards/d1 | View chart>',
+      '<http://app:8080/dashboards/d1 | Open chart>',
     );
   });
 
   it('omits the footer link when the title already goes there', () => {
-    expect(allText(blocksOf(makeMessage()))).not.toContain('View chart');
+    expect(allText(blocksOf(makeMessage()))).not.toContain('Open chart');
   });
 
   describe('resolved alerts', () => {

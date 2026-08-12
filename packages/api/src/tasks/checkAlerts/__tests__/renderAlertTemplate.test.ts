@@ -416,7 +416,7 @@ describe('renderAlertTemplate group scoping', () => {
 
       const blocks = lastSlackBlocks();
       const context = blocks[blocks.length - 1];
-      expect(context.elements[0].text).toContain('View search');
+      expect(context.elements[0].text).toContain('Open search');
     });
 
     it('does not query for a representative row when no display fields are set', async () => {
@@ -594,6 +594,7 @@ describe('renderAlertTemplate for tile alerts', () => {
 
     const context = lastBlocks()[lastBlocks().length - 1];
     expect(context.elements[0].text).toContain('/dashboards/');
+    expect(context.elements[0].text).toContain('Open chart');
   });
 });
 

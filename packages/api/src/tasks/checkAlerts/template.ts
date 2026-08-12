@@ -750,7 +750,7 @@ export const renderAlertTemplate = async ({
           originLink: {
             url: originLink,
             label:
-              alert.source === AlertSource.TILE ? 'View chart' : 'View search',
+              alert.source === AlertSource.TILE ? 'Open chart' : 'Open search',
           },
         }),
       };
