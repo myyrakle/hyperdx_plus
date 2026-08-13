@@ -60,6 +60,10 @@ export const sessions = {
     run: '실행',
     refresh: '결과 새로고침',
     loading: '불러오는 중...',
+    filtersUnavailable: '세션 필터를 표시할 수 없습니다',
+    showFilters: '필터 보기',
+    filtersDropped_other:
+      '이 소스에 적용할 수 없는 필터 {{count}}개를 제거했습니다.',
   },
   setup: {
     title: '세션 리플레이 설정',

@@ -1077,25 +1077,32 @@ const DBSearchPageFiltersComponent = ({
   setFilterValue: _setFilterValue,
   isLive,
   chartConfig,
-  analysisMode,
+  analysisMode = 'results',
   setAnalysisMode,
   sourceId,
   showDelta,
-  denoiseResults,
+  denoiseResults = false,
   setDenoiseResults,
   setFilterRange,
   onColumnToggle,
   displayedColumns,
   onCollapse,
+  hideAnalysisMode,
 }: {
-  analysisMode: 'results' | 'delta' | 'pattern';
-  setAnalysisMode: (mode: 'results' | 'delta' | 'pattern') => void;
-  isLive: boolean;
+  analysisMode?: 'results' | 'delta' | 'pattern';
+  setAnalysisMode?: (mode: 'results' | 'delta' | 'pattern') => void;
+  isLive?: boolean;
   chartConfig: BuilderChartConfigWithDateRange;
   sourceId?: string;
-  showDelta: boolean;
-  denoiseResults: boolean;
-  setDenoiseResults: (denoiseResults: boolean) => void;
+  showDelta?: boolean;
+  denoiseResults?: boolean;
+  setDenoiseResults?: (denoiseResults: boolean) => void;
+  /**
+   * Hide the analysis mode tabs and the denoise toggle, leaving only the
+   * facet list. Used by pages that have no results/deltas/patterns modes
+   * (e.g. Client Sessions).
+   */
+  hideAnalysisMode?: boolean;
   setFilterRange: (key: string, range: { min: number; max: number }) => void;
   onColumnToggle?: (column: string) => void;
   displayedColumns?: string[];
@@ -1636,10 +1643,15 @@ const DBSearchPageFiltersComponent = ({
         }}
       >
         <Stack gap="sm" p="xs">
-          <Flex align="center" justify="space-between">
-            <Text size="xxs" c="dimmed" fw="bold">
-              {t('filters.analysisMode')}
-            </Text>
+          <Flex
+            align="center"
+            justify={hideAnalysisMode ? 'flex-end' : 'space-between'}
+          >
+            {!hideAnalysisMode && (
+              <Text size="xxs" c="dimmed" fw="bold">
+                {t('filters.analysisMode')}
+              </Text>
+            )}
             <Group gap={0}>
               {showRefreshButton && (
                 <TextButton
@@ -1677,31 +1689,33 @@ const DBSearchPageFiltersComponent = ({
               )}
             </Group>
           </Flex>
-          <Tabs
-            value={analysisMode}
-            onChange={value =>
-              setAnalysisMode(value as 'results' | 'delta' | 'pattern')
-            }
-            orientation="vertical"
-            w="100%"
-            placement="right"
-          >
-            <Tabs.List w="100%">
-              <Tabs.Tab value="results" size="xs" h="24px">
-                <Text size="xs">{t('filters.resultsTable')}</Text>
-              </Tabs.Tab>
-              {showDelta && (
-                <Tabs.Tab value="delta" size="xs" h="24px">
-                  <Text size="xs">{t('filters.eventDeltas')}</Text>
+          {!hideAnalysisMode && (
+            <Tabs
+              value={analysisMode}
+              onChange={value =>
+                setAnalysisMode?.(value as 'results' | 'delta' | 'pattern')
+              }
+              orientation="vertical"
+              w="100%"
+              placement="right"
+            >
+              <Tabs.List w="100%">
+                <Tabs.Tab value="results" size="xs" h="24px">
+                  <Text size="xs">{t('filters.resultsTable')}</Text>
                 </Tabs.Tab>
-              )}
-              {!IS_CLICKHOUSE_BUILD && (
-                <Tabs.Tab value="pattern" size="xs" h="24px">
-                  <Text size="xs">{t('filters.eventPatterns')}</Text>
-                </Tabs.Tab>
-              )}
-            </Tabs.List>
-          </Tabs>
+                {showDelta && (
+                  <Tabs.Tab value="delta" size="xs" h="24px">
+                    <Text size="xs">{t('filters.eventDeltas')}</Text>
+                  </Tabs.Tab>
+                )}
+                {!IS_CLICKHOUSE_BUILD && (
+                  <Tabs.Tab value="pattern" size="xs" h="24px">
+                    <Text size="xs">{t('filters.eventPatterns')}</Text>
+                  </Tabs.Tab>
+                )}
+              </Tabs.List>
+            </Tabs>
+          )}
 
           {isSharedFiltersVisible && (
             <SharedFiltersSection
@@ -1779,7 +1793,7 @@ const DBSearchPageFiltersComponent = ({
             </Flex>
             <Collapse expanded={isFiltersExpanded}>
               <Stack gap="sm">
-                {analysisMode === 'results' && (
+                {!hideAnalysisMode && analysisMode === 'results' && (
                   <Checkbox
                     size={13 as any}
                     checked={denoiseResults}
@@ -1806,7 +1820,7 @@ const DBSearchPageFiltersComponent = ({
                         </Text>
                       </Tooltip>
                     }
-                    onChange={() => setDenoiseResults(!denoiseResults)}
+                    onChange={() => setDenoiseResults?.(!denoiseResults)}
                   />
                 )}
 
