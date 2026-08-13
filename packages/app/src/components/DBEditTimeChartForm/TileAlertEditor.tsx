@@ -95,6 +95,10 @@ export function TileAlertEditor({
     control,
     name: 'alert.numConsecutiveWindows',
   });
+  const alertNotifyOnStateChangeOnly = useWatch({
+    control,
+    name: 'alert.notifyOnStateChangeOnly',
+  });
   const maxAlertScheduleOffsetMinutes = alert?.interval
     ? Math.max(intervalToMinutes(alert.interval) - 1, 0)
     : 0;
@@ -264,6 +268,8 @@ export function TileAlertEditor({
             }
             numConsecutiveWindowsName="alert.numConsecutiveWindows"
             numConsecutiveWindows={alertnumConsecutiveWindows ?? undefined}
+            notifyOnStateChangeOnlyName="alert.notifyOnStateChangeOnly"
+            notifyOnStateChangeOnly={alertNotifyOnStateChangeOnly ?? undefined}
           />
           <Text size="xxs" opacity={0.5} mb={4} mt="sm">
             {t('alertEditor.sendTo')}

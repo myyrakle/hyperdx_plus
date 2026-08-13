@@ -229,4 +229,29 @@ describe('DBSearchPageAlertModal', () => {
     );
     expect(createAlertMutateAsync).not.toHaveBeenCalled();
   });
+
+  it('submits notifyOnStateChangeOnly when the advanced option is checked', async () => {
+    renderModal();
+
+    const alertTab = await screen.findByRole('tab', { name: /Alert 2/ });
+    fireEvent.click(alertTab);
+
+    fireEvent.click(
+      await screen.findByTestId('alert-advanced-settings-toggle'),
+    );
+    fireEvent.click(
+      await screen.findByLabelText('Notify only on state change'),
+    );
+
+    const saveButton = await screen.findByText('Save Alert');
+    fireEvent.click(saveButton.closest('button') as HTMLButtonElement);
+
+    await waitFor(() => {
+      expect(updateAlertMutateAsync).toHaveBeenCalledTimes(1);
+    });
+
+    expect(updateAlertMutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ notifyOnStateChangeOnly: true }),
+    );
+  });
 });

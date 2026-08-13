@@ -84,6 +84,7 @@ const SavedSearchAlertFormSchema = z
     // nullish() (not optional()): persisted alerts store this as null, which
     // optional() would reject.
     numConsecutiveWindows: z.number().int().min(1).nullish(),
+    notifyOnStateChangeOnly: z.boolean().nullish(),
   })
   .passthrough()
   .superRefine(validateAlertScheduleOffsetMinutes)
@@ -133,6 +134,9 @@ const AlertForm = ({
           // Persisted null -> undefined for the NumberInput.
           numConsecutiveWindows:
             defaultValues.numConsecutiveWindows ?? undefined,
+          // Persisted null -> undefined for the Checkbox.
+          notifyOnStateChangeOnly:
+            defaultValues.notifyOnStateChangeOnly ?? undefined,
         }
       : {
           interval: '5m',
@@ -172,6 +176,10 @@ const AlertForm = ({
   const numConsecutiveWindows = useWatch({
     control,
     name: 'numConsecutiveWindows',
+  });
+  const notifyOnStateChangeOnly = useWatch({
+    control,
+    name: 'notifyOnStateChangeOnly',
   });
   const maxScheduleOffsetMinutes = Math.max(
     intervalToMinutes(interval ?? '5m') - 1,
@@ -299,6 +307,8 @@ const AlertForm = ({
             })}
             numConsecutiveWindowsName="numConsecutiveWindows"
             numConsecutiveWindows={numConsecutiveWindows ?? undefined}
+            notifyOnStateChangeOnlyName="notifyOnStateChangeOnly"
+            notifyOnStateChangeOnly={notifyOnStateChangeOnly ?? undefined}
           />
           <Text size="xxs" opacity={0.5} mb={4} mt="xs">
             {t('searchModal.groupedBy')}

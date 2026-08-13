@@ -8977,6 +8977,319 @@ describe('checkAlerts', () => {
         expect(serviceBHistories[0].fired).toBeFalsy();
       });
     });
+
+    describe('state-change-only notifications (notifyOnStateChangeOnly)', () => {
+      it('re-notifies on every window when the option is off', async () => {
+        const {
+          team,
+          webhook,
+          connection,
+          source,
+          savedSearch,
+          teamWebhooksById,
+          clickhouseClient,
+        } = await setupSavedSearchAlertTest();
+
+        jest
+          .spyOn(slack, 'postMessageToWebhook')
+          .mockResolvedValue(null as any);
+
+        const details = await createAlertDetails(
+          team,
+          source,
+          {
+            source: AlertSource.SAVED_SEARCH,
+            channel: { type: 'webhook', webhookId: webhook._id.toString() },
+            interval: '5m',
+            thresholdType: AlertThresholdType.ABOVE,
+            threshold: 0,
+            savedSearchId: savedSearch.id,
+          },
+          { taskType: AlertTaskType.SAVED_SEARCH, savedSearch },
+        );
+
+        await bulkInsertLogs([
+          {
+            ServiceName: 'api',
+            Timestamp: new Date('2024-01-01T00:05:00Z'),
+            SeverityText: 'error',
+            Body: 'err',
+          },
+          {
+            ServiceName: 'api',
+            Timestamp: new Date('2024-01-01T00:10:00Z'),
+            SeverityText: 'error',
+            Body: 'err',
+          },
+        ]);
+
+        await processAlertAtTime(
+          new Date('2024-01-01T00:12:00Z'),
+          details,
+          clickhouseClient,
+          connection,
+          alertProvider,
+          teamWebhooksById,
+        );
+        expect(slack.postMessageToWebhook).toHaveBeenCalledTimes(1);
+
+        // Still breaching, and the default behaviour is to notify again.
+        await processAlertAtTime(
+          new Date('2024-01-01T00:17:00Z'),
+          details,
+          clickhouseClient,
+          connection,
+          alertProvider,
+          teamWebhooksById,
+        );
+        expect(slack.postMessageToWebhook).toHaveBeenCalledTimes(2);
+      });
+
+      it('notifies once while the alert stays open across consecutive windows', async () => {
+        const {
+          team,
+          webhook,
+          connection,
+          source,
+          savedSearch,
+          teamWebhooksById,
+          clickhouseClient,
+        } = await setupSavedSearchAlertTest();
+
+        jest
+          .spyOn(slack, 'postMessageToWebhook')
+          .mockResolvedValue(null as any);
+
+        const details = await createAlertDetails(
+          team,
+          source,
+          {
+            source: AlertSource.SAVED_SEARCH,
+            channel: { type: 'webhook', webhookId: webhook._id.toString() },
+            interval: '5m',
+            thresholdType: AlertThresholdType.ABOVE,
+            threshold: 0,
+            savedSearchId: savedSearch.id,
+            notifyOnStateChangeOnly: true,
+          },
+          { taskType: AlertTaskType.SAVED_SEARCH, savedSearch },
+        );
+
+        await bulkInsertLogs([
+          {
+            ServiceName: 'api',
+            Timestamp: new Date('2024-01-01T00:05:00Z'),
+            SeverityText: 'error',
+            Body: 'err',
+          },
+          {
+            ServiceName: 'api',
+            Timestamp: new Date('2024-01-01T00:10:00Z'),
+            SeverityText: 'error',
+            Body: 'err',
+          },
+        ]);
+
+        // First breach: OK -> ALERT is a state change, so it notifies.
+        await processAlertAtTime(
+          new Date('2024-01-01T00:12:00Z'),
+          details,
+          clickhouseClient,
+          connection,
+          alertProvider,
+          teamWebhooksById,
+        );
+        expect(slack.postMessageToWebhook).toHaveBeenCalledTimes(1);
+
+        // Second breach: the alert is already open, so no second notification.
+        await processAlertAtTime(
+          new Date('2024-01-01T00:17:00Z'),
+          details,
+          clickhouseClient,
+          connection,
+          alertProvider,
+          teamWebhooksById,
+        );
+        expect(slack.postMessageToWebhook).toHaveBeenCalledTimes(1);
+
+        // The alert must stay open so that it can still resolve later.
+        const histories = await AlertHistory.find({
+          alert: details.alert.id,
+        }).sort({ createdAt: 1 });
+        expect(histories).toHaveLength(2);
+        expect(histories[1].state).toBe('ALERT');
+        expect(histories[1].fired).toBe(true);
+      });
+
+      it('notifies again after the alert resolves and breaches a second time', async () => {
+        const {
+          team,
+          webhook,
+          connection,
+          source,
+          savedSearch,
+          teamWebhooksById,
+          clickhouseClient,
+        } = await setupSavedSearchAlertTest();
+
+        jest
+          .spyOn(slack, 'postMessageToWebhook')
+          .mockResolvedValue(null as any);
+
+        const details = await createAlertDetails(
+          team,
+          source,
+          {
+            source: AlertSource.SAVED_SEARCH,
+            channel: { type: 'webhook', webhookId: webhook._id.toString() },
+            interval: '5m',
+            // ABOVE is inclusive (value >= threshold), so a threshold of 0
+            // would keep an empty window breaching and the alert could never
+            // resolve. 1 makes an empty window resolve the alert.
+            thresholdType: AlertThresholdType.ABOVE,
+            threshold: 1,
+            savedSearchId: savedSearch.id,
+            notifyOnStateChangeOnly: true,
+          },
+          { taskType: AlertTaskType.SAVED_SEARCH, savedSearch },
+        );
+
+        // Nothing in the 00:10-00:15 window, so the alert resolves in between.
+        await bulkInsertLogs([
+          {
+            ServiceName: 'api',
+            Timestamp: new Date('2024-01-01T00:05:00Z'),
+            SeverityText: 'error',
+            Body: 'err',
+          },
+          {
+            ServiceName: 'api',
+            Timestamp: new Date('2024-01-01T00:15:00Z'),
+            SeverityText: 'error',
+            Body: 'err',
+          },
+        ]);
+
+        await processAlertAtTime(
+          new Date('2024-01-01T00:12:00Z'),
+          details,
+          clickhouseClient,
+          connection,
+          alertProvider,
+          teamWebhooksById,
+        );
+        expect(slack.postMessageToWebhook).toHaveBeenCalledTimes(1);
+
+        // Resolution notification still goes out.
+        await processAlertAtTime(
+          new Date('2024-01-01T00:17:00Z'),
+          details,
+          clickhouseClient,
+          connection,
+          alertProvider,
+          teamWebhooksById,
+        );
+        expect(slack.postMessageToWebhook).toHaveBeenCalledTimes(2);
+
+        // A new breach after a resolution is a state change, so it notifies again.
+        await processAlertAtTime(
+          new Date('2024-01-01T00:22:00Z'),
+          details,
+          clickhouseClient,
+          connection,
+          alertProvider,
+          teamWebhooksById,
+        );
+        expect(slack.postMessageToWebhook).toHaveBeenCalledTimes(3);
+      });
+
+      it('suppresses only the group that is already open', async () => {
+        const {
+          team,
+          webhook,
+          connection,
+          source,
+          savedSearch,
+          teamWebhooksById,
+          clickhouseClient,
+        } = await setupSavedSearchAlertTest();
+
+        jest
+          .spyOn(slack, 'postMessageToWebhook')
+          .mockResolvedValue(null as any);
+
+        const details = await createAlertDetails(
+          team,
+          source,
+          {
+            source: AlertSource.SAVED_SEARCH,
+            channel: { type: 'webhook', webhookId: webhook._id.toString() },
+            interval: '5m',
+            thresholdType: AlertThresholdType.ABOVE,
+            threshold: 0,
+            savedSearchId: savedSearch.id,
+            groupBy: 'ServiceName',
+            notifyOnStateChangeOnly: true,
+          },
+          { taskType: AlertTaskType.SAVED_SEARCH, savedSearch },
+        );
+
+        // Window 1: only service-a breaches.
+        // Window 2: service-a is still breaching, and service-b breaches for
+        // the first time.
+        await bulkInsertLogs([
+          {
+            ServiceName: 'service-a',
+            Timestamp: new Date('2024-01-01T00:05:00Z'),
+            SeverityText: 'error',
+            Body: 'err',
+          },
+          {
+            ServiceName: 'service-a',
+            Timestamp: new Date('2024-01-01T00:10:00Z'),
+            SeverityText: 'error',
+            Body: 'err',
+          },
+          {
+            ServiceName: 'service-b',
+            Timestamp: new Date('2024-01-01T00:10:00Z'),
+            SeverityText: 'error',
+            Body: 'err',
+          },
+        ]);
+
+        await processAlertAtTime(
+          new Date('2024-01-01T00:12:00Z'),
+          details,
+          clickhouseClient,
+          connection,
+          alertProvider,
+          teamWebhooksById,
+        );
+        expect(slack.postMessageToWebhook).toHaveBeenCalledTimes(1);
+
+        // Only service-b's first breach notifies; service-a is already open.
+        await processAlertAtTime(
+          new Date('2024-01-01T00:17:00Z'),
+          details,
+          clickhouseClient,
+          connection,
+          alertProvider,
+          teamWebhooksById,
+        );
+        expect(slack.postMessageToWebhook).toHaveBeenCalledTimes(2);
+
+        const histories = await AlertHistory.find({
+          alert: details.alert.id,
+        }).sort({ createdAt: 1 });
+        const serviceAHistories = histories.filter(
+          h => h.group === 'ServiceName:service-a',
+        );
+        expect(serviceAHistories).toHaveLength(2);
+        expect(serviceAHistories[1].state).toBe('ALERT');
+        expect(serviceAHistories[1].fired).toBe(true);
+      });
+    });
   });
 
   describe('processAlert with materialized views', () => {

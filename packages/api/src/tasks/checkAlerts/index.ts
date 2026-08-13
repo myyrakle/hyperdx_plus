@@ -1083,6 +1083,31 @@ export const processAlert = async (
       );
     };
 
+    // With notifyOnStateChangeOnly, a breach only notifies when the alert was
+    // not already open for that group. `fired` stays true from the run that
+    // notified until an OK history resolves it, so it is the "already open"
+    // marker. The alert still transitions to ALERT and still sends its
+    // resolution notification; only the repeat notifications are suppressed.
+    const shouldNotifyForBreach = (
+      previousHistory: AggregatedAlertHistory | undefined,
+      groupKey: string,
+    ): boolean => {
+      if (alert.notifyOnStateChangeOnly !== true) {
+        return true;
+      }
+
+      if (previousHistory?.fired !== true) {
+        return true;
+      }
+
+      alertEvaluationsCounter.add(1, { outcome: 'skipped_already_open' });
+      logger.info(
+        { alertId: alert.id, group: groupKey },
+        'Skipped firing alert because it is already open and the alert only notifies on state change',
+      );
+      return false;
+    };
+
     const sendNotificationIfResolved = async (
       previousHistory: AggregatedAlertHistory | undefined,
       currentHistory: IAlertHistory,
@@ -1133,12 +1158,14 @@ export const processAlert = async (
         if (shouldFireBasedOnConsecutiveWindows()) {
           history.state = AlertState.ALERT;
           history.fired = true;
-          await trySendNotification({
-            state: AlertState.ALERT,
-            group: '',
-            totalCount: value,
-            startTime: alertTimestamp,
-          });
+          if (shouldNotifyForBreach(previous, '')) {
+            await trySendNotification({
+              state: AlertState.ALERT,
+              group: '',
+              totalCount: value,
+              startTime: alertTimestamp,
+            });
+          }
         } else {
           history.state = AlertState.PENDING;
           // Carry forward fired=true if a notification was previously sent and not yet resolved.
@@ -1339,13 +1366,15 @@ export const processAlert = async (
       if (hitAlertThisRun) {
         const context = latestAlertContext.get(groupKey);
         if (context) {
-          await trySendNotification({
-            state: AlertState.ALERT,
-            group: groupKey,
-            totalCount: context.value,
-            startTime: context.startTime,
-            attributes: context.attributes,
-          });
+          if (shouldNotifyForBreach(groupPrevious, groupKey)) {
+            await trySendNotification({
+              state: AlertState.ALERT,
+              group: groupKey,
+              totalCount: context.value,
+              startTime: context.startTime,
+              attributes: context.attributes,
+            });
+          }
 
           // Inject a mock previous history so the resolve check below catches it
           // if the final state for this group is OK (i.e. it breached then resolved).

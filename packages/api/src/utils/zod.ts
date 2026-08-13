@@ -672,6 +672,7 @@ export const alertSchema = z
     message: z.string().min(1).max(4096).nullish(),
     note: alertNoteSchema,
     numConsecutiveWindows: z.number().int().min(1).nullish(),
+    notifyOnStateChangeOnly: z.boolean().nullish(),
     // Values pulled from a representative row and rendered as labelled fields
     // by the slack_error webhook service. Applies to both alert sources.
     displayFields: z

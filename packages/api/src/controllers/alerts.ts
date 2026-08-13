@@ -160,6 +160,9 @@ const makeAlert = (alert: AlertInput, userId?: ObjectId): Partial<IAlert> => {
 
     // Multi-window alerting
     numConsecutiveWindows: alert.numConsecutiveWindows ?? null,
+
+    // Notification behaviour
+    notifyOnStateChangeOnly: alert.notifyOnStateChangeOnly ?? null,
   };
 };
 

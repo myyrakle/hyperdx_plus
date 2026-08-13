@@ -103,6 +103,10 @@ export interface IAlert {
   // Multi-window alerting: fire only after N violations in M consecutive windows
   numConsecutiveWindows?: number | null;
 
+  // Notify only when the state changes (OK -> ALERT), instead of re-notifying
+  // on every window while the alert stays open.
+  notifyOnStateChangeOnly?: boolean | null;
+
   // Errors recorded during the most recent execution
   executionErrors?: IAlertError[];
   createdAt: Date;
@@ -236,6 +240,10 @@ const AlertSchema = new Schema<IAlert>(
       type: Number,
       required: false,
       min: 1,
+    },
+    notifyOnStateChangeOnly: {
+      type: Boolean,
+      required: false,
     },
     silenced: {
       required: false,
