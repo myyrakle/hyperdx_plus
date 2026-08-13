@@ -34,6 +34,19 @@ const INITIAL_LOAD_LIMIT = 20;
 /* The maximum number of values per filter to load when "Load More" is clicked */
 const LOAD_MORE_LOAD_LIMIT = 10000;
 
+/**
+ * A page-level restriction on which rows a facet may draw its values from,
+ * as opposed to the user's own query. "Show all values" deliberately discards
+ * the user's query so they can see values outside their current result set,
+ * but it must not discard this — e.g. Client Sessions reads a trace table that
+ * also holds server spans, and offering services that have no sessions at all
+ * would just be a dead end.
+ */
+export type FacetScope = {
+  where: string;
+  whereLanguage?: 'sql' | 'lucene';
+};
+
 function useFacetsFromRawTables({
   chartConfig,
   sourceId,
@@ -41,6 +54,7 @@ function useFacetsFromRawTables({
   dateRange,
   filterState,
   showMoreFields,
+  scope,
   enabled,
 }: {
   chartConfig: BuilderChartConfigWithDateRange;
@@ -49,6 +63,7 @@ function useFacetsFromRawTables({
   dateRange: [Date, Date];
   filterState?: FilterState;
   showMoreFields?: boolean;
+  scope?: FacetScope;
   enabled?: boolean;
 }) {
   const { data: source } = useSource({
@@ -146,9 +161,17 @@ function useFacetsFromRawTables({
   const facetsChartConfig = useMemo(
     () =>
       mode === 'all'
-        ? { ...chartConfig, dateRange, where: '', filters: [] }
+        ? {
+            ...chartConfig,
+            dateRange,
+            where: scope?.where ?? '',
+            ...(scope?.whereLanguage && {
+              whereLanguage: scope.whereLanguage,
+            }),
+            filters: [],
+          }
         : { ...chartConfig, dateRange },
-    [chartConfig, dateRange, mode],
+    [chartConfig, dateRange, mode, scope],
   );
 
   // Exact pipeline step 2: fetch values for discovered keys
@@ -289,6 +312,7 @@ export function useFetchFacets({
   mode,
   filterState,
   showMoreFields,
+  scope,
 }: {
   chartConfig: BuilderChartConfigWithDateRange;
   sourceId: string | null;
@@ -296,13 +320,17 @@ export function useFetchFacets({
   mode: 'all' | 'exact';
   filterState?: FilterState;
   showMoreFields?: boolean;
+  /** Page-level row restriction that survives "show all values". */
+  scope?: FacetScope;
 }) {
   const { data: source } = useSource({
     id: sourceId,
   });
   const tableConnection = tcFromSource(source);
   const hasMVs = !!tableConnection.metadataMVs;
-  const useRawTablePipeline = !hasMVs || mode === 'exact';
+  // The MV pipeline reads pre-aggregated key/value pairs for the whole table
+  // and cannot honor a scope, so a scoped caller always queries the raw table.
+  const useRawTablePipeline = !hasMVs || mode === 'exact' || !!scope;
 
   const fromMVs = useAllFacetsFromMVs({
     sourceId,
@@ -318,6 +346,7 @@ export function useFetchFacets({
     dateRange,
     filterState,
     showMoreFields,
+    scope,
     enabled: useRawTablePipeline,
   });
 
@@ -406,6 +435,7 @@ export function useFetchFacets({
     filterState,
     chartConfig.where,
     chartConfig.whereLanguage,
+    scope?.where,
   ]);
 
   const output = useMemo(() => {

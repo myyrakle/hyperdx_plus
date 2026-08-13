@@ -378,6 +378,12 @@ function SessionsPage() {
     ),
   });
 
+  // The trace table also carries plain server spans. Everything the sidebar
+  // shows is restricted to spans that belong to a browser session.
+  const sessionSpansOnly = traceTrace
+    ? `${traceTrace.resourceAttributesExpression}.rum.sessionId:*`
+    : '';
+
   const filtersChartConfig = useMemo<BuilderChartConfigWithDateRange>(
     () => ({
       from: traceTrace?.from ?? { databaseName: '', tableName: '' },
@@ -385,16 +391,20 @@ function SessionsPage() {
       timestampValueExpression: traceTrace?.timestampValueExpression ?? '',
       implicitColumnExpression: traceTrace?.implicitColumnExpression,
       useTextIndexForImplicitColumn: traceTrace?.useTextIndexForImplicitColumn,
-      // Keep facet values scoped to RUM spans so non-session traces on the same
-      // table don't pollute the value lists.
-      where: traceTrace
-        ? `${traceTrace.resourceAttributesExpression}.rum.sessionId:*`
-        : '',
+      where: sessionSpansOnly,
       whereLanguage: 'lucene',
       select: '',
       dateRange: searchedTimeRange,
     }),
-    [traceTrace, searchedTimeRange],
+    [traceTrace, sessionSpansOnly, searchedTimeRange],
+  );
+
+  // Same restriction as a facet scope: it must survive "show all values", which
+  // otherwise drops the where clause and starts offering server-only services
+  // that can never match a session.
+  const facetScope = useMemo(
+    () => ({ where: sessionSpansOnly, whereLanguage: 'lucene' as const }),
+    [sessionSpansOnly],
   );
 
   const [isFilterSidebarCollapsed, setIsFilterSidebarCollapsed] =
@@ -559,6 +569,7 @@ function SessionsPage() {
                   <DBSearchPageFilters
                     hideAnalysisMode
                     chartConfig={filtersChartConfig}
+                    facetScope={facetScope}
                     sourceId={traceTrace.id}
                     onCollapse={() => setIsFilterSidebarCollapsed(true)}
                     {...searchFilters}
