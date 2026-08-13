@@ -184,13 +184,48 @@ describe('fetchGroupSampleFields', () => {
     expect(await call({ clickhouseClient: makeClient([]) as any })).toEqual([]);
   });
 
-  it('renders a missing column as an empty value rather than dropping it', async () => {
+  it('omits a field the row has no value for', async () => {
+    // A span that timed out carries no stack trace; rendering the slot anyway
+    // produced a labelled, empty code block in the notification.
     const result = await call({
       clickhouseClient: makeClient([{ 'other-column': 'x' }]) as any,
     });
 
+    expect(result).toEqual([]);
+  });
+
+  it('omits only the empty slots, keeping the rest', async () => {
+    const result = await call({
+      clickhouseClient: makeClient([
+        { __hdx_display_0: 'boom', __hdx_display_1: '' },
+      ]) as any,
+      displayFields: {
+        errorMessage: 'StatusMessage',
+        stacktrace: "SpanAttributes['code.stacktrace']",
+      },
+    });
+
     expect(result).toEqual([
-      { label: 'Error message', value: '', long: false },
+      { label: 'Error message', value: 'boom', long: false },
+    ]);
+  });
+
+  it('omits a whitespace-only value, which renders as an empty block', async () => {
+    const result = await call({
+      clickhouseClient: makeClient([{ __hdx_display_0: '   ' }]) as any,
+    });
+
+    expect(result).toEqual([]);
+  });
+
+  it('keeps a value of zero, which is a real reading', async () => {
+    const result = await call({
+      displayFields: { extra: [{ valueExpression: 'db.rows_affected' }] },
+      clickhouseClient: makeClient([{ __hdx_display_0: 0 }]) as any,
+    });
+
+    expect(result).toEqual([
+      { label: 'db.rows_affected', value: '0', long: false },
     ]);
   });
 

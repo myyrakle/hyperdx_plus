@@ -69,6 +69,7 @@ import {
   handleSendGenericWebhook,
   renderAlertTemplate,
 } from '@/tasks/checkAlerts/template';
+import { buildAlertTemplateView } from '@/tasks/checkAlerts/templateView';
 import { tasksTracer } from '@/tasks/tracer';
 import { CheckAlertsTaskArgs, HdxTask } from '@/tasks/types';
 import {
@@ -384,48 +385,19 @@ const fireChannelEvent = async ({
   windowSizeInMins: number;
   teamWebhooksById: Map<string, IWebhook>;
 }) => {
-  const team = alert.team;
-  if (team == null) {
-    throw new Error('Team not found');
-  }
-
-  const attributesNested = unflattenObject(attributes);
-  const templateView: AlertMessageTemplateDefaultView = {
-    alert: {
-      id: alert.id,
-      channel: alert.channel,
-      dashboardId: dashboard?.id,
-      groupBy: alert.groupBy,
-      displayFields: alert.displayFields,
-      interval: alert.interval,
-      ...(alert.scheduleOffsetMinutes != null && {
-        scheduleOffsetMinutes: alert.scheduleOffsetMinutes,
-      }),
-      ...(alert.scheduleStartAt != null && {
-        scheduleStartAt: alert.scheduleStartAt.toISOString(),
-      }),
-      message: alert.message,
-      name: alert.name,
-      savedSearchId: savedSearch?.id,
-      silenced: alert.silenced,
-      source: alert.source,
-      threshold: alert.threshold,
-      thresholdMax: alert.thresholdMax,
-      thresholdType: alert.thresholdType,
-      tileId: alert.tileId,
-    },
-    attributes: attributesNested,
-    attributesFlat: attributes,
+  const templateView = buildAlertTemplateView({
+    alert,
+    attributes,
     dashboard,
     endTime,
-    granularity: `${windowSizeInMins} minute`,
     group,
     isGroupedAlert,
     savedSearch,
     source,
     startTime,
-    value: totalCount,
-  };
+    totalCount,
+    windowSizeInMins,
+  });
 
   await renderAlertTemplate({
     alertProvider,
