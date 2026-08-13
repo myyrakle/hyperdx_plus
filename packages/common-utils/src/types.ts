@@ -658,6 +658,12 @@ export const AlertBaseObjectSchema = z.object({
     .optional(),
   numConsecutiveWindows: z.number().int().min(1).nullish(),
   /**
+   * Notify only when the alert changes state. While the alert stays open, the
+   * repeat notifications are suppressed; the resolution notification and any
+   * later breach still notify.
+   */
+  notifyOnStateChangeOnly: z.boolean().nullish(),
+  /**
    * Values pulled from a representative row of the alerting group and rendered
    * as labelled fields in the notification.
    * Only the `slack_error` webhook service renders these.
@@ -2193,6 +2199,7 @@ export const AlertsPageItemSchema = z.object({
     .optional(),
   executionErrors: z.array(AlertErrorSchema).optional(),
   numConsecutiveWindows: z.number().int().min(1).nullish(),
+  notifyOnStateChangeOnly: z.boolean().nullish(),
 });
 
 export type AlertsPageItem = z.infer<typeof AlertsPageItemSchema>;

@@ -41,6 +41,9 @@ export const alerts = {
       'Number of consecutive evaluation windows that must breach the threshold before an alert fires. Useful for reducing noise from transient spikes.',
     window_one: 'window',
     window_other: 'consecutive windows',
+    stateChangeOnly: 'Notify only on state change',
+    stateChangeOnlyHelp:
+      'Sends one notification when the alert starts firing and stays quiet while it remains open. You still get the resolution notification, and a new breach after that notifies again.',
     offset: 'Start offset (min)',
     offsetHelp:
       'Delays the start of each evaluation window by this many minutes. Useful when data is ingested with a lag.',

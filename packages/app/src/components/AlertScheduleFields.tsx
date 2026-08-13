@@ -11,6 +11,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Box,
+  Checkbox,
   Collapse,
   Group,
   NumberInput,
@@ -39,6 +40,8 @@ type AlertScheduleFieldsProps<T extends FieldValues> = {
   offsetWindowLabel: string;
   numConsecutiveWindowsName?: FieldPath<T>;
   numConsecutiveWindows?: number;
+  notifyOnStateChangeOnlyName?: FieldPath<T>;
+  notifyOnStateChangeOnly?: boolean;
 };
 
 export function AlertScheduleFields<T extends FieldValues>({
@@ -51,6 +54,8 @@ export function AlertScheduleFields<T extends FieldValues>({
   offsetWindowLabel,
   numConsecutiveWindowsName,
   numConsecutiveWindows,
+  notifyOnStateChangeOnlyName,
+  notifyOnStateChangeOnly,
 }: AlertScheduleFieldsProps<T>) {
   const { t } = useTranslation('alerts');
   const showScheduleOffsetInput = maxScheduleOffsetMinutes > 0;
@@ -62,7 +67,8 @@ export function AlertScheduleFields<T extends FieldValues>({
   const hasAdvancedScheduleValues =
     (scheduleOffsetMinutes ?? 0) > 0 ||
     hasScheduleStartAtAnchor ||
-    (numConsecutiveWindows ?? 1) > 1;
+    (numConsecutiveWindows ?? 1) > 1 ||
+    notifyOnStateChangeOnly === true;
   const [opened, setOpened] = useState(hasAdvancedScheduleValues);
 
   useEffect(() => {
@@ -149,6 +155,40 @@ export function AlertScheduleFields<T extends FieldValues>({
                   count: numConsecutiveWindows ?? 1,
                 })}
               </Text>
+            </Group>
+          )}
+          {notifyOnStateChangeOnlyName && (
+            <Group gap={4} mt="xs">
+              <Controller
+                control={control}
+                name={notifyOnStateChangeOnlyName}
+                render={({ field }) => (
+                  <Checkbox
+                    size="xs"
+                    label={t('schedule.stateChangeOnly')}
+                    checked={field.value === true}
+                    onChange={event =>
+                      field.onChange(
+                        event.currentTarget.checked ? true : undefined,
+                      )
+                    }
+                    onBlur={field.onBlur}
+                    ref={field.ref}
+                    data-testid="alert-notify-on-state-change-only"
+                  />
+                )}
+              />
+              <Tooltip
+                label={t('schedule.stateChangeOnlyHelp')}
+                multiline
+                w={260}
+                withArrow
+                zIndex={10050}
+              >
+                <Box style={{ lineHeight: 1, cursor: 'help' }}>
+                  <IconInfoCircle size={14} opacity={0.4} />
+                </Box>
+              </Tooltip>
             </Group>
           )}
           {showScheduleOffsetInput && (

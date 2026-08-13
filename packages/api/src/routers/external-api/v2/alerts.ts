@@ -198,6 +198,11 @@ import { alertSchema, objectIdSchema } from '@/utils/zod';
  *           nullable: true
  *           description: Fire the alert only after its condition has been met for this many consecutive evaluation windows. While the condition is met but fewer than this many consecutive windows have violated, the alert is in the PENDING state.
  *           example: 3
+ *         notifyOnStateChangeOnly:
+ *           type: boolean
+ *           nullable: true
+ *           description: Notify only when the alert changes state. When true, a breach notifies once and stays silent while the alert remains open; the next notification is the resolution, and a new breach after that resolution notifies again. When false or unset, every evaluation window that breaches sends a notification.
+ *           example: true
  *
  *     AlertResponse:
  *       allOf:
