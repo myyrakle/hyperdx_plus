@@ -67,7 +67,7 @@ import { useSource } from '@/source';
 import { useLocalStorage } from '@/utils';
 
 import { FilterSettingsPanel } from './DBSearchPageFilters/FilterSettingsPopover';
-import { useFetchFacets } from './DBSearchPageFilters/hooks';
+import { FacetScope, useFetchFacets } from './DBSearchPageFilters/hooks';
 import { NestedFilterGroup } from './DBSearchPageFilters/NestedFilterGroup';
 import {
   PinShareIndicator,
@@ -1088,6 +1088,7 @@ const DBSearchPageFiltersComponent = ({
   displayedColumns,
   onCollapse,
   hideAnalysisMode,
+  facetScope,
 }: {
   analysisMode?: 'results' | 'delta' | 'pattern';
   setAnalysisMode?: (mode: 'results' | 'delta' | 'pattern') => void;
@@ -1103,6 +1104,14 @@ const DBSearchPageFiltersComponent = ({
    * (e.g. Client Sessions).
    */
   hideAnalysisMode?: boolean;
+  /**
+   * Rows the facet values may come from, regardless of the user's query or the
+   * "show all values" setting. Set it when the source table holds more than the
+   * page is about (e.g. Client Sessions over a trace table that also carries
+   * server spans). Forces the raw-table facet pipeline, since the metadata
+   * materialized views cover the whole table and cannot be scoped.
+   */
+  facetScope?: FacetScope;
   setFilterRange: (key: string, range: { min: number; max: number }) => void;
   onColumnToggle?: (column: string) => void;
   displayedColumns?: string[];
@@ -1208,6 +1217,7 @@ const DBSearchPageFiltersComponent = ({
     mode: showAllValues ? 'all' : 'exact',
     filterState,
     showMoreFields,
+    scope: facetScope,
   });
 
   useEffect(() => {

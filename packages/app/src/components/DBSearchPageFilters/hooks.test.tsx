@@ -250,6 +250,92 @@ describe('useFetchFacets', () => {
       expect(mvCall?.[1]?.enabled).toBe(true);
       expect(rawCall?.[1]?.enabled).toBe(false);
     });
+
+    it('uses the raw-tables pipeline when a facet scope is set, even in all mode with MVs', () => {
+      setupDefaultMocks({ withMVs: true });
+      const { wrapper } = makeWrapper();
+
+      renderHook(
+        () =>
+          useFetchFacets({
+            chartConfig: CHART_CONFIG,
+            sourceId: 'source1',
+            dateRange: DATE_RANGE,
+            mode: 'all',
+            scope: { where: 'rum.sessionId:*', whereLanguage: 'lucene' },
+          }),
+        { wrapper },
+      );
+
+      const rawCall = useGetKeyValues.mock.calls.at(-1);
+      const mvCall = useAllFieldsAndValues.mock.calls.at(-1);
+      expect(rawCall?.[1]?.enabled).toBe(true);
+      expect(mvCall?.[1]?.enabled).toBe(false);
+    });
+  });
+
+  describe('facet scope', () => {
+    it('drops the query where clause in all mode when no scope is given', () => {
+      setupDefaultMocks({ withMVs: false });
+      const { wrapper } = makeWrapper();
+
+      renderHook(
+        () =>
+          useFetchFacets({
+            chartConfig: { ...CHART_CONFIG, where: `level = 'error'` },
+            sourceId: 'source1',
+            dateRange: DATE_RANGE,
+            mode: 'all',
+          }),
+        { wrapper },
+      );
+
+      const config = useGetKeyValues.mock.calls.at(-1)![0].chartConfig!;
+      expect(config.where).toBe('');
+      expect(config.filters).toEqual([]);
+    });
+
+    it('keeps the scope as the where clause in all mode, dropping the user query', () => {
+      setupDefaultMocks({ withMVs: false });
+      const { wrapper } = makeWrapper();
+
+      renderHook(
+        () =>
+          useFetchFacets({
+            chartConfig: { ...CHART_CONFIG, where: `level = 'error'` },
+            sourceId: 'source1',
+            dateRange: DATE_RANGE,
+            mode: 'all',
+            scope: { where: 'rum.sessionId:*', whereLanguage: 'lucene' },
+          }),
+        { wrapper },
+      );
+
+      const config = useGetKeyValues.mock.calls.at(-1)![0].chartConfig!;
+      expect(config.where).toBe('rum.sessionId:*');
+      expect(config.whereLanguage).toBe('lucene');
+      expect(config.filters).toEqual([]);
+    });
+
+    it('leaves the chart config untouched in exact mode', () => {
+      setupDefaultMocks({ withMVs: false });
+      const { wrapper } = makeWrapper();
+
+      renderHook(
+        () =>
+          useFetchFacets({
+            chartConfig: { ...CHART_CONFIG, where: 'rum.sessionId:*' },
+            sourceId: 'source1',
+            dateRange: DATE_RANGE,
+            mode: 'exact',
+            scope: { where: 'rum.sessionId:*', whereLanguage: 'lucene' },
+          }),
+        { wrapper },
+      );
+
+      const config = useGetKeyValues.mock.calls.at(-1)![0].chartConfig!;
+      expect(config.where).toBe('rum.sessionId:*');
+    });
   });
 
   describe('data selection', () => {
