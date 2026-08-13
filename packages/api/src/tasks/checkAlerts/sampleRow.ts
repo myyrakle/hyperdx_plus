@@ -150,16 +150,19 @@ export const fetchGroupSampleFields = async ({
       return [];
     }
 
-    return slots.map((slot, i) => {
-      const value = row[aliasOf(i)];
-      return {
-        label: slot.label,
-        // A column the query did not return still gets a field, so a mismatch is
-        // visible in the notification rather than silently dropped.
-        value: value == null ? '' : `${value}`,
-        long: slot.long,
-      };
-    });
+    return (
+      slots
+        .map((slot, i) => ({
+          label: slot.label,
+          value: row[aliasOf(i)] == null ? '' : `${row[aliasOf(i)]}`,
+          long: slot.long,
+        }))
+        // A row often has nothing for a slot — a span that timed out carries no
+        // stack trace — and rendering it anyway leaves a labelled empty code
+        // block in the notification. Zero is a real reading, so only blank
+        // strings drop out.
+        .filter(field => field.value.trim() !== '')
+    );
   } catch (e) {
     logger.error(
       {
