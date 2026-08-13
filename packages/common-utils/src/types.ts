@@ -126,6 +126,7 @@ export const NumberFormatSchema = z.object({
     'time',
     'duration',
     'number',
+    'number_korean',
     'data_rate',
     'throughput',
   ]),
