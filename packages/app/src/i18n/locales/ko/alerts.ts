@@ -132,13 +132,13 @@ export const alerts = {
     windowOffset: '{{interval}} 구간마다',
     groupedBy: '그룹 기준',
     sqlColumns: 'SQL 컬럼',
-    mention: '발화 시 멘션',
+    mention: '트리거 시 멘션',
     mentionNone: '멘션 없음',
     mentionHint:
-      '알림이 발화할 때만 붙습니다. 해소 시에는 멘션하지 않습니다. Slack (Error) 전용입니다.',
+      '알림이 트리거될 때만 붙습니다. 해소 시에는 멘션하지 않습니다. Slack (Error) 전용입니다.',
     displayFields: '메시지에 포함할 필드',
     displayFieldsHint:
-      '발화한 그룹의 가장 최근 행에서 값을 읽습니다. Slack (Error) 전용입니다.',
+      '트리거된 그룹의 가장 최근 행에서 값을 읽습니다. Slack (Error) 전용입니다.',
     sendTo: '전송 대상',
     groupedWarning:
       '주의: 이 임계값 타입과 “그룹 기준”을 함께 사용하면 특정 그룹에 데이터가 없는 구간에서는 알림이 발생하지 않습니다.',
