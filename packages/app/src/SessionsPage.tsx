@@ -12,6 +12,8 @@ import { useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { tcFromSource } from '@hyperdx/common-utils/dist/core/metadata';
 import {
+  BuilderChartConfigWithDateRange,
+  Filter,
   SearchCondition,
   SearchConditionLanguage,
   SourceKind,
@@ -27,20 +29,30 @@ import {
   Stepper,
   Tooltip,
 } from '@mantine/core';
+import { useDebouncedCallback } from '@mantine/hooks';
+import { notifications } from '@mantine/notifications';
 import {
+  IconArrowBarToRight,
   IconDeviceLaptop,
   IconPlayerPlay,
   IconRefresh,
 } from '@tabler/icons-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
+import { ActiveFilterPills } from '@/components/ActiveFilterPills';
+import { DBSearchPageFilters } from '@/components/DBSearchPageFilters';
 import EmptyState from '@/components/EmptyState';
+import { ErrorBoundary } from '@/components/Error/ErrorBoundary';
 import { PageHeader } from '@/components/PageHeader';
 import { PageLayout } from '@/components/PageLayout';
 import { SourceSelectControlled } from '@/components/SourceSelect';
 import { TimePicker } from '@/components/TimePicker';
 import { useDashboardRefresh } from '@/hooks/useDashboardRefresh';
+import { useColumns, useResolvedDateTimeColumns } from '@/hooks/useMetadata';
+import { useRetainFiltersOnSourceChange } from '@/hooks/useRetainFiltersOnSourceChange';
+import { useSearchPageFilterState } from '@/searchFilters';
 import { parseTimeQuery, useNewTimeQuery } from '@/timeQuery';
+import { parseAsJsonEncoded } from '@/utils/queryParsers';
 
 import OnboardingModal from './components/OnboardingModal';
 import SearchWhereInput, {
@@ -52,7 +64,7 @@ import { Session, useSessions } from './sessions';
 import SessionSidePanel from './SessionSidePanel';
 import { useSource, useSources } from './source';
 import { FormatTime } from './useFormatTime';
-import { formatDistanceToNowStrictShort } from './utils';
+import { formatDistanceToNowStrictShort, useLocalStorage } from './utils';
 
 import styles from '@styles/SessionsPage.module.scss';
 
@@ -232,7 +244,10 @@ const appliedConfigMap = {
   sessionSource: parseAsString,
   where: parseAsString.withDefault(''),
   whereLanguage: parseAsStringEnum<'sql' | 'lucene'>(['sql', 'lucene']),
+  filters: parseAsJsonEncoded<Filter[]>(),
 };
+
+const EMPTY_FILTERS: Filter[] = [];
 function SessionsPage() {
   const { t } = useTranslation('sessions');
   const brandName = useBrandDisplayName();
@@ -244,12 +259,14 @@ function SessionsPage() {
       whereLanguage:
         appliedConfig.whereLanguage ?? getStoredLanguage() ?? 'lucene',
       source: appliedConfig.sessionSource,
+      filters: appliedConfig.filters ?? EMPTY_FILTERS,
     },
   });
 
   const where = useWatch({ control, name: 'where' });
   const whereLanguage = useWatch({ control, name: 'whereLanguage' });
   const sourceId = useWatch({ control, name: 'source' });
+  const filters = useWatch({ control, name: 'filters' });
   const { data: sessionSource, isPending: isSessionSourceLoading } = useSource({
     id: sourceId,
     kinds: [SourceKind.Session],
@@ -314,6 +331,75 @@ function SessionsPage() {
     }
   }, [sourceId, appliedConfig.sessionSource, onSubmit]);
 
+  // Sessions are aggregated from the trace source, so the facet sidebar reads
+  // its schema — the same source the `where` input autocompletes against.
+  const { data: traceSourceColumns } = useColumns(
+    {
+      databaseName: traceTrace?.from?.databaseName ?? '',
+      tableName: traceTrace?.from?.tableName ?? '',
+      connectionId: traceTrace?.connection ?? '',
+    },
+    { enabled: !!traceTrace },
+  );
+  const knownColumns = useMemo(
+    () => new Set((traceSourceColumns ?? []).map(c => c.name)),
+    [traceSourceColumns],
+  );
+  const { dateTimeColumns } = useResolvedDateTimeColumns(traceSourceColumns);
+
+  const debouncedSubmit = useDebouncedCallback(onSubmit, 1000);
+  const handleSetFilters = useCallback(
+    (newFilters: Filter[]) => {
+      setValue('filters', newFilters);
+      debouncedSubmit();
+    },
+    [setValue, debouncedSubmit],
+  );
+
+  const searchFilters = useSearchPageFilterState({
+    searchQuery: filters ?? undefined,
+    onFilterChange: handleSetFilters,
+    dateTimeColumns,
+    knownColumns,
+  });
+
+  useRetainFiltersOnSourceChange({
+    sourceId: traceTrace?.id,
+    columns: traceSourceColumns,
+    retainFiltersByColumns: searchFilters.retainFiltersByColumns,
+    onFiltersDropped: useCallback(
+      (dropped: string[]) => {
+        notifications.show({
+          color: 'yellow',
+          message: t('list.filtersDropped', { count: dropped.length }),
+        });
+      },
+      [t],
+    ),
+  });
+
+  const filtersChartConfig = useMemo<BuilderChartConfigWithDateRange>(
+    () => ({
+      from: traceTrace?.from ?? { databaseName: '', tableName: '' },
+      connection: traceTrace?.connection ?? '',
+      timestampValueExpression: traceTrace?.timestampValueExpression ?? '',
+      implicitColumnExpression: traceTrace?.implicitColumnExpression,
+      useTextIndexForImplicitColumn: traceTrace?.useTextIndexForImplicitColumn,
+      // Keep facet values scoped to RUM spans so non-session traces on the same
+      // table don't pollute the value lists.
+      where: traceTrace
+        ? `${traceTrace.resourceAttributesExpression}.rum.sessionId:*`
+        : '',
+      whereLanguage: 'lucene',
+      select: '',
+      dateRange: searchedTimeRange,
+    }),
+    [traceTrace, searchedTimeRange],
+  );
+
+  const [isFilterSidebarCollapsed, setIsFilterSidebarCollapsed] =
+    useLocalStorage<boolean>('isSessionFilterSidebarCollapsed', false);
+
   const [selectedSessionQuery, setSelectedSessionQuery] = useQueryStates(
     selectedSessionQueryStateMap,
     {
@@ -364,6 +450,7 @@ function SessionsPage() {
     // TODO: if selectedSession is not null, we should filter by that session id
     where: appliedConfig.where as SearchCondition,
     whereLanguage: appliedConfig.whereLanguage as SearchConditionLanguage,
+    filters: appliedConfig.filters ?? undefined,
   });
 
   const sessions = tableData?.data ?? [];
@@ -465,40 +552,71 @@ function SessionsPage() {
               </Group>
             </PageHeader>
           }
-          padded
           content={
-            <>
-              {isSessionsLoading || isSessionSourceLoading ? (
-                <Group mt="md" align="center" justify="center" gap="xs">
-                  <IconRefresh className="spin-animate" size={14} />
-                  {isSessionSourceLoading
-                    ? t('list.loading')
-                    : t('list.searching')}
-                </Group>
-              ) : (
-                <>
-                  {!sessions.length ? (
-                    <Flex
-                      align="center"
-                      justify="center"
-                      style={{ flex: 1, minHeight: 0 }}
-                    >
-                      <SessionSetupInstructions />
-                    </Flex>
-                  ) : (
-                    <div style={{ minHeight: 0 }}>
-                      <SessionCardList
-                        onClick={session => {
-                          setSelectedSession(session);
-                        }}
-                        sessions={sessions}
-                        isSessionLoading={isSessionsLoading}
-                      />
-                    </div>
-                  )}
-                </>
+            <div className={styles.sessionsContainer}>
+              {!isFilterSidebarCollapsed && traceTrace != null && (
+                <ErrorBoundary message={t('list.filtersUnavailable')}>
+                  <DBSearchPageFilters
+                    hideAnalysisMode
+                    chartConfig={filtersChartConfig}
+                    sourceId={traceTrace.id}
+                    onCollapse={() => setIsFilterSidebarCollapsed(true)}
+                    {...searchFilters}
+                  />
+                </ErrorBoundary>
               )}
-            </>
+              <div className={styles.sessionsResults}>
+                <Group gap={4} align="center" wrap="nowrap">
+                  {isFilterSidebarCollapsed && (
+                    <Tooltip label={t('list.showFilters')} position="bottom">
+                      <ActionIcon
+                        variant="subtle"
+                        size="xs"
+                        onClick={() => setIsFilterSidebarCollapsed(false)}
+                        aria-label={t('list.showFilters')}
+                      >
+                        <IconArrowBarToRight size={14} />
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
+                  <ActiveFilterPills
+                    searchFilters={searchFilters}
+                    chartConfig={filtersChartConfig}
+                    dateTimeColumns={dateTimeColumns}
+                  />
+                </Group>
+                {isSessionsLoading || isSessionSourceLoading ? (
+                  <Group mt="md" align="center" justify="center" gap="xs">
+                    <IconRefresh className="spin-animate" size={14} />
+                    {isSessionSourceLoading
+                      ? t('list.loading')
+                      : t('list.searching')}
+                  </Group>
+                ) : (
+                  <>
+                    {!sessions.length ? (
+                      <Flex
+                        align="center"
+                        justify="center"
+                        style={{ flex: 1, minHeight: 0 }}
+                      >
+                        <SessionSetupInstructions />
+                      </Flex>
+                    ) : (
+                      <div style={{ minHeight: 0 }}>
+                        <SessionCardList
+                          onClick={session => {
+                            setSelectedSession(session);
+                          }}
+                          sessions={sessions}
+                          isSessionLoading={isSessionsLoading}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
           }
         />
       </form>

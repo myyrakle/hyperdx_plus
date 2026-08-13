@@ -5,6 +5,7 @@ import { chSql } from '@hyperdx/common-utils/dist/clickhouse';
 import { renderChartConfig } from '@hyperdx/common-utils/dist/core/renderChartConfig';
 import {
   DateRange,
+  Filter,
   pickSampleWeightExpressionProps,
   SearchCondition,
   SearchConditionLanguage,
@@ -44,12 +45,15 @@ export function useSessions(
     dateRange,
     where,
     whereLanguage,
+    filters,
   }: {
     traceSource?: TTraceSource;
     sessionSource?: TSessionSource;
     dateRange: DateRange['dateRange'];
     where?: SearchCondition;
     whereLanguage?: SearchConditionLanguage;
+    /** Sidebar facet filters, applied on top of `where`. */
+    filters?: Filter[];
   },
   options?: Omit<UseQueryOptions<any, Error>, 'queryKey'>,
 ) {
@@ -77,6 +81,7 @@ export function useSessions(
       dateRange,
       where,
       whereLanguage,
+      filters,
     ],
     queryFn: async () => {
       if (
@@ -87,6 +92,23 @@ export function useSessions(
       ) {
         return [];
       }
+
+      // The free-form `where` box and the sidebar facets both narrow the same
+      // aggregation, so they ride in as one filter list. Left empty, the key is
+      // dropped entirely and the rendered SQL is unchanged.
+      const mergedFilters: Filter[] = [
+        ...(where
+          ? [
+              {
+                type:
+                  (whereLanguage === 'promql' ? 'lucene' : whereLanguage) ??
+                  'lucene',
+                condition: where,
+              } as Filter,
+            ]
+          : []),
+        ...(filters ?? []),
+      ];
 
       const traceSessionIdExpression = getTraceSourceFieldExpression(
         traceSource.resourceAttributesExpression ?? 'ResourceAttributes',
@@ -153,16 +175,7 @@ export function useSessions(
             dateRange,
             where: `${traceSource.resourceAttributesExpression}.rum.sessionId:*`,
             whereLanguage: 'lucene',
-            ...(where && {
-              filters: [
-                {
-                  type:
-                    (whereLanguage === 'promql' ? 'lucene' : whereLanguage) ??
-                    'lucene',
-                  condition: where,
-                },
-              ],
-            }),
+            ...(mergedFilters.length > 0 && { filters: mergedFilters }),
             timestampValueExpression: traceSource.timestampValueExpression,
             implicitColumnExpression: traceSource.implicitColumnExpression,
             useTextIndexForImplicitColumn:

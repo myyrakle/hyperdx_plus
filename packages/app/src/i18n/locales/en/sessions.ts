@@ -58,6 +58,12 @@ export const sessions = {
     run: 'Run',
     refresh: 'Refresh results',
     loading: 'Loading...',
+    filtersUnavailable: 'Unable to render session filters',
+    showFilters: 'Show filters',
+    filtersDropped_one:
+      "{{count}} filter didn't apply to this source and was removed.",
+    filtersDropped_other:
+      "{{count}} filters didn't apply to this source and were removed.",
   },
   setup: {
     title: 'Set up session replays',
