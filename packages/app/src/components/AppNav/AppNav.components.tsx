@@ -28,7 +28,7 @@ import {
   IconUserCog,
 } from '@tabler/icons-react';
 
-import { IS_LOCAL_MODE } from '@/config';
+import { IS_CLOUD_BANNER_ENABLED, IS_LOCAL_MODE } from '@/config';
 
 import { KeyboardShortcutsModal } from './KeyboardShortcutsModal';
 
@@ -44,6 +44,10 @@ export const AppNavContext = React.createContext<{
 
 export const AppNavCloudBanner = () => {
   const { t } = useTranslation('navigation');
+
+  if (!IS_CLOUD_BANNER_ENABLED) {
+    return null;
+  }
 
   return (
     <div className="my-3 bg-muted rounded p-2 text-center">

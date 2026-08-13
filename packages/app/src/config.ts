@@ -65,3 +65,10 @@ export const IS_METRICS_ENABLED = true;
 export const IS_MTVIEWS_ENABLED = false;
 export const IS_SESSIONS_ENABLED = true;
 export const IS_PROMQL_ENABLED = env('NEXT_PUBLIC_ENABLE_PROMQL') === 'true';
+
+/**
+ * Promotional banner in the sidebar pitching a ClickHouse Cloud deployment.
+ * Disabled by default; opt back in with NEXT_PUBLIC_ENABLE_CLOUD_BANNER=true.
+ */
+export const IS_CLOUD_BANNER_ENABLED =
+  env('NEXT_PUBLIC_ENABLE_CLOUD_BANNER') === 'true';
