@@ -395,6 +395,62 @@ describe('ChartDisplaySettingsDrawer', () => {
       });
     });
 
+    it('persists the Korean number format when it is selected', async () => {
+      const onChange = jest.fn();
+      const user = userEvent.setup();
+
+      renderWithMantine(
+        <ChartDisplaySettingsDrawer
+          {...numberBuilderProps}
+          defaultNumberFormat={durationFormat}
+          onChange={onChange}
+        />,
+      );
+
+      await user.selectOptions(
+        screen.getByRole('combobox', { name: /output format/i }),
+        'number_korean',
+      );
+      await user.click(screen.getByRole('button', { name: /apply/i }));
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange.mock.calls[0][0].numberFormat).toMatchObject({
+        output: 'number_korean',
+      });
+    });
+
+    it('hides the separator and large-number toggles for the Korean format', async () => {
+      const user = userEvent.setup();
+
+      renderWithMantine(
+        <ChartDisplaySettingsDrawer
+          {...numberBuilderProps}
+          defaultNumberFormat={durationFormat}
+        />,
+      );
+
+      const outputSelect = screen.getByRole('combobox', {
+        name: /output format/i,
+      });
+
+      await user.selectOptions(outputSelect, 'number');
+      expect(
+        screen.getByRole('checkbox', { name: /separate thousands/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('checkbox', { name: /large number format/i }),
+      ).toBeInTheDocument();
+
+      await user.selectOptions(outputSelect, 'number_korean');
+      expect(
+        screen.queryByRole('checkbox', { name: /separate thousands/i }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('checkbox', { name: /large number format/i }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByText(/decimals/i)).toBeInTheDocument();
+    });
+
     it('preserves an existing explicit format when only another setting changes', async () => {
       const onChange = jest.fn();
       const user = userEvent.setup();

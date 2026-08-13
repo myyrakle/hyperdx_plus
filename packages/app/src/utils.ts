@@ -975,6 +975,30 @@ const formatAutoScaleData = (
   return `${scaledValue.toFixed(mantissa)} ${units[i]}${rateSuffix}`;
 };
 
+// Korean myriad scale: each unit is 10,000x the previous one. Ordered largest
+// first so the first match is the largest applicable unit. 경 (10^16) is the
+// ceiling — anything larger keeps growing in 경.
+const KOREAN_NUMBER_UNITS: { threshold: number; suffix: string }[] = [
+  { threshold: 1e16, suffix: '경' },
+  { threshold: 1e12, suffix: '조' },
+  { threshold: 1e8, suffix: '억' },
+  { threshold: 1e4, suffix: '만' },
+];
+
+const stripTrailingZeros = (value: string): string =>
+  value.includes('.') ? value.replace(/\.?0+$/, '') : value;
+
+const formatKoreanNumber = (value: number, mantissa: number): string => {
+  const absValue = Math.abs(value);
+  const unit = KOREAN_NUMBER_UNITS.find(
+    ({ threshold }) => absValue >= threshold,
+  );
+  const scaled = unit ? absValue / unit.threshold : absValue;
+  const sign = value < 0 ? '-' : '';
+
+  return `${sign}${stripTrailingZeros(scaled.toFixed(mantissa))}${unit?.suffix ?? ''}`;
+};
+
 export const formatNumber = (
   value?: string | number,
   options?: NumberFormat,
@@ -1029,6 +1053,13 @@ export const formatNumber = (
     const factor = options.factor ?? 1;
     const ms = value * factor * 1000;
     return formatDurationMs(ms);
+  }
+
+  if (options.output === 'number_korean') {
+    return (
+      formatKoreanNumber(value, mantissa) +
+      (options.unit ? ` ${options.unit}` : '')
+    );
   }
 
   const numbroFormat: numbro.Format = {

@@ -406,6 +406,7 @@ export const charts = {
     },
     outputs: {
       number: '숫자',
+      numberKorean: '숫자 (한국식)',
       currency: '통화',
       percent: '백분율',
       duration: '기간',

@@ -283,6 +283,58 @@ describe('formatNumber', () => {
     });
   });
 
+  describe('korean number format', () => {
+    const korean = (overrides?: Partial<NumberFormat>): NumberFormat => ({
+      output: 'number_korean',
+      mantissa: 2,
+      ...overrides,
+    });
+
+    it('leaves values below 만 unscaled and unseparated', () => {
+      expect(formatNumber(0, korean())).toBe('0');
+      expect(formatNumber(1234, korean())).toBe('1234');
+      expect(formatNumber(9999, korean())).toBe('9999');
+    });
+
+    it('rounds sub-만 decimals to the configured mantissa', () => {
+      expect(formatNumber(1234.5678, korean())).toBe('1234.57');
+    });
+
+    it('scales to the largest applicable unit', () => {
+      expect(formatNumber(10000, korean())).toBe('1만');
+      expect(formatNumber(12345, korean())).toBe('1.23만');
+      expect(formatNumber(123456789, korean())).toBe('1.23억');
+      expect(formatNumber(1234567890123, korean())).toBe('1.23조');
+      expect(formatNumber(1.23e16, korean())).toBe('1.23경');
+    });
+
+    it('keeps 경 as the largest unit', () => {
+      expect(formatNumber(1.234e19, korean())).toBe('1234경');
+    });
+
+    it('strips trailing zeros from the scaled value', () => {
+      expect(formatNumber(1.2e8, korean())).toBe('1.2억');
+      expect(formatNumber(1e8, korean())).toBe('1억');
+    });
+
+    it('preserves the sign of negative values', () => {
+      expect(formatNumber(-12345, korean())).toBe('-1.23만');
+      expect(formatNumber(-1234, korean())).toBe('-1234');
+    });
+
+    it('defaults to a mantissa of 0', () => {
+      expect(formatNumber(12345, { output: 'number_korean' })).toBe('1만');
+    });
+
+    it('accepts numeric strings', () => {
+      expect(formatNumber('123456789', korean())).toBe('1.23억');
+    });
+
+    it('appends the configured unit suffix', () => {
+      expect(formatNumber(12345, korean({ unit: '건' }))).toBe('1.23만 건');
+    });
+  });
+
   describe('currency format', () => {
     it('formats with default currency symbol', () => {
       const format: NumberFormat = {

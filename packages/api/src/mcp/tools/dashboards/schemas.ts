@@ -85,6 +85,7 @@ const mcpNumberFormatSchema = z.object({
       'time',
       'duration',
       'number',
+      'number_korean',
       'data_rate',
       'throughput',
     ])
@@ -92,7 +93,8 @@ const mcpNumberFormatSchema = z.object({
       'Format category. "duration" auto-formats elapsed times as e.g. "1.2s" (use factor for input unit). ' +
         '"time" formats clock-style durations. "byte" formats as KB/MB/GB. ' +
         '"data_rate" formats as bytes/sec. "throughput" formats as count/sec. ' +
-        '"currency" prepends a symbol. "percent" appends %, and divides the value by 100 (0.5 becomes 50%).',
+        '"currency" prepends a symbol. "percent" appends %, and divides the value by 100 (0.5 becomes 50%). ' +
+        '"number_korean" scales to the Korean myriad units 만/억/조/경 (e.g. 123456789 becomes "1.23억").',
     ),
   mantissa: z
     .number()

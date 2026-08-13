@@ -32,6 +32,7 @@ import { ChartConfigDisplaySettings } from './ChartDisplaySettingsDrawer';
 
 export const FORMAT_ICONS: Record<string, React.ReactNode> = {
   number: <IconNumbers size={14} />,
+  number_korean: <IconNumbers size={14} />,
   currency: <IconCurrencyDollar size={14} />,
   percent: <IconPercentage size={14} />,
   byte: <IconDatabase size={14} />,
@@ -142,6 +143,10 @@ function useOutputCategoryOptions(): OutputGroup[] {
         group: t('numberFormat.groups.basic'),
         items: [
           { value: 'number', label: t('numberFormat.outputs.number') },
+          {
+            value: 'number_korean',
+            label: t('numberFormat.outputs.numberKorean'),
+          },
           { value: 'currency', label: t('numberFormat.outputs.currency') },
           { value: 'percent', label: t('numberFormat.outputs.percent') },
           { value: 'duration', label: t('numberFormat.outputs.duration') },
@@ -166,6 +171,11 @@ function useOutputCategoryOptions(): OutputGroup[] {
 
 const hasNumericUnit = (output: string) =>
   output === 'byte' || output === 'data_rate' || output === 'throughput';
+
+// The Korean myriad format always scales to 만/억/조/경, so neither thousand
+// separators nor the generic large-number abbreviation apply to it.
+const hasSeparatorToggles = (output: string) =>
+  !hasNumericUnit(output) && output !== 'number_korean';
 
 export const NumberFormatForm: React.FC<{
   control: Control<Pick<ChartConfigDisplaySettings, 'numberFormat'>>;
@@ -363,7 +373,7 @@ export const NumberFormatForm: React.FC<{
                 );
               }}
             />
-          ) : !hasNumericUnit(format.output ?? '') ? (
+          ) : hasSeparatorToggles(format.output ?? '') ? (
             <>
               <Controller
                 control={control}

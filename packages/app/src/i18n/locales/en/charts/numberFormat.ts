@@ -19,6 +19,7 @@ export const numberFormat = {
   },
   outputs: {
     number: 'Number',
+    numberKorean: 'Number (Korean)',
     currency: 'Currency',
     percent: 'Percentage',
     duration: 'Duration',

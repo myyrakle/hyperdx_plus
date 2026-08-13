@@ -62,16 +62,7 @@
       },
       "AlertInterval": {
         "type": "string",
-        "enum": [
-          "1m",
-          "5m",
-          "15m",
-          "30m",
-          "1h",
-          "6h",
-          "12h",
-          "1d"
-        ],
+        "enum": ["1m", "5m", "15m", "30m", "1h", "6h", "12h", "1d"],
         "description": "Evaluation interval."
       },
       "AlertThresholdType": {
@@ -90,48 +81,28 @@
       },
       "AlertSource": {
         "type": "string",
-        "enum": [
-          "saved_search",
-          "tile"
-        ],
+        "enum": ["saved_search", "tile"],
         "description": "Alert source type."
       },
       "AlertState": {
         "type": "string",
-        "enum": [
-          "ALERT",
-          "OK",
-          "INSUFFICIENT_DATA",
-          "DISABLED",
-          "PENDING"
-        ],
+        "enum": ["ALERT", "OK", "INSUFFICIENT_DATA", "DISABLED", "PENDING"],
         "description": "Current alert state."
       },
       "AlertChannelType": {
         "type": "string",
-        "enum": [
-          "webhook"
-        ],
+        "enum": ["webhook"],
         "description": "Channel type."
       },
       "AlertErrorType": {
         "type": "string",
-        "enum": [
-          "QUERY_ERROR",
-          "WEBHOOK_ERROR",
-          "INVALID_ALERT",
-          "UNKNOWN"
-        ],
+        "enum": ["QUERY_ERROR", "WEBHOOK_ERROR", "INVALID_ALERT", "UNKNOWN"],
         "description": "Category of error recorded during alert execution."
       },
       "AlertExecutionError": {
         "type": "object",
         "description": "An error recorded during a recent alert execution.",
-        "required": [
-          "timestamp",
-          "type",
-          "message"
-        ],
+        "required": ["timestamp", "type", "message"],
         "properties": {
           "timestamp": {
             "type": "string",
@@ -177,10 +148,7 @@
       },
       "AlertChannelWebhook": {
         "type": "object",
-        "required": [
-          "type",
-          "webhookId"
-        ],
+        "required": ["type", "webhookId"],
         "properties": {
           "type": {
             "$ref": "#/components/schemas/AlertChannelType",
@@ -364,12 +332,7 @@
           },
           {
             "type": "object",
-            "required": [
-              "threshold",
-              "interval",
-              "thresholdType",
-              "channel"
-            ]
+            "required": ["threshold", "interval", "thresholdType", "channel"]
           }
         ]
       },
@@ -380,12 +343,7 @@
           },
           {
             "type": "object",
-            "required": [
-              "threshold",
-              "interval",
-              "thresholdType",
-              "channel"
-            ]
+            "required": ["threshold", "interval", "thresholdType", "channel"]
           }
         ]
       },
@@ -400,10 +358,7 @@
       },
       "AlertsListResponse": {
         "type": "object",
-        "required": [
-          "data",
-          "meta"
-        ],
+        "required": ["data", "meta"],
         "properties": {
           "data": {
             "type": "array",
@@ -424,12 +379,7 @@
       },
       "ChartSeries": {
         "type": "object",
-        "required": [
-          "sourceId",
-          "aggFn",
-          "where",
-          "groupBy"
-        ],
+        "required": ["sourceId", "aggFn", "where", "groupBy"],
         "properties": {
           "sourceId": {
             "type": "string",
@@ -464,10 +414,7 @@
           "whereLanguage": {
             "type": "string",
             "description": "Query language used in the where clause",
-            "enum": [
-              "lucene",
-              "sql"
-            ],
+            "enum": ["lucene", "sql"],
             "example": "lucene"
           },
           "groupBy": {
@@ -476,10 +423,7 @@
             "items": {
               "type": "string"
             },
-            "example": [
-              "service",
-              "host"
-            ]
+            "example": ["service", "host"]
           },
           "metricName": {
             "type": "string",
@@ -489,22 +433,14 @@
           "metricDataType": {
             "type": "string",
             "description": "Type of metric data",
-            "enum": [
-              "sum",
-              "gauge",
-              "histogram"
-            ],
+            "enum": ["sum", "gauge", "histogram"],
             "example": "gauge"
           }
         }
       },
       "SeriesQueryRequest": {
         "type": "object",
-        "required": [
-          "series",
-          "startTime",
-          "endTime"
-        ],
+        "required": ["series", "startTime", "endTime"],
         "properties": {
           "series": {
             "type": "array",
@@ -550,10 +486,7 @@
           "seriesReturnType": {
             "type": "string",
             "description": "Format of the returned data",
-            "enum": [
-              "ratio",
-              "column"
-            ],
+            "enum": ["ratio", "column"],
             "example": "column"
           }
         }
@@ -582,10 +515,7 @@
             "items": {
               "type": "string"
             },
-            "example": [
-              "api",
-              "prod-host-1"
-            ]
+            "example": ["api", "prod-host-1"]
           }
         }
       },
@@ -603,12 +533,7 @@
       },
       "Connection": {
         "type": "object",
-        "required": [
-          "id",
-          "name",
-          "host",
-          "username"
-        ],
+        "required": ["id", "name", "host", "username"],
         "properties": {
           "id": {
             "type": "string",
@@ -657,11 +582,7 @@
       },
       "CreateConnectionRequest": {
         "type": "object",
-        "required": [
-          "name",
-          "host",
-          "username"
-        ],
+        "required": ["name", "host", "username"],
         "properties": {
           "name": {
             "type": "string",
@@ -699,11 +620,7 @@
       },
       "UpdateConnectionRequest": {
         "type": "object",
-        "required": [
-          "name",
-          "host",
-          "username"
-        ],
+        "required": ["name", "host", "username"],
         "properties": {
           "name": {
             "type": "string",
@@ -773,9 +690,7 @@
                 "items": {
                   "type": "string"
                 },
-                "example": [
-                  "507f1f77bcf86cd799439012"
-                ]
+                "example": ["507f1f77bcf86cd799439012"]
               }
             }
           }
@@ -789,11 +704,12 @@
           "byte",
           "time",
           "number",
+          "number_korean",
           "data_rate",
           "throughput",
           "duration"
         ],
-        "description": "Output format type (currency, percent, byte, time, number, data_rate, throughput, duration)."
+        "description": "Output format type (currency, percent, byte, time, number, number_korean, data_rate, throughput, duration)."
       },
       "AggregationFunction": {
         "type": "string",
@@ -813,23 +729,16 @@
       },
       "QueryLanguage": {
         "type": "string",
-        "enum": [
-          "sql",
-          "lucene"
-        ],
+        "enum": ["sql", "lucene"],
         "description": "Query language for the where clause."
       },
       "SavedFilterValue": {
         "type": "object",
-        "required": [
-          "condition"
-        ],
+        "required": ["condition"],
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "sql"
-            ],
+            "enum": ["sql"],
             "default": "sql",
             "description": "Filter type. Currently only \"sql\" is supported.",
             "example": "sql"
@@ -854,28 +763,17 @@
       },
       "TimeSeriesDisplayType": {
         "type": "string",
-        "enum": [
-          "stacked_bar",
-          "line"
-        ],
+        "enum": ["stacked_bar", "line"],
         "description": "Visual representation type for the time series."
       },
       "QuantileLevel": {
         "type": "number",
-        "enum": [
-          0.5,
-          0.9,
-          0.95,
-          0.99
-        ],
+        "enum": [0.5, 0.9, 0.95, 0.99],
         "description": "Percentile level; only valid when aggFn is \"quantile\"."
       },
       "SortOrder": {
         "type": "string",
-        "enum": [
-          "desc",
-          "asc"
-        ],
+        "enum": ["desc", "asc"],
         "description": "Sort order for table rows."
       },
       "NumberFormat": {
@@ -1001,17 +899,12 @@
       },
       "BackgroundChart": {
         "type": "object",
-        "required": [
-          "type"
-        ],
+        "required": ["type"],
         "description": "Optional background trend sparkline drawn behind a number tile's value, derived from a time-bucketed version of the tile's query. Builder number tiles only (raw SQL number tiles have no time dimension to bucket).\n",
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "line",
-              "area"
-            ],
+            "enum": ["line", "area"],
             "description": "Sparkline shape.",
             "example": "line"
           },
@@ -1023,21 +916,12 @@
       },
       "NumericColorCondition": {
         "type": "object",
-        "required": [
-          "operator",
-          "value",
-          "color"
-        ],
+        "required": ["operator", "value", "color"],
         "description": "Color rule comparing the displayed value against a single numeric bound.",
         "properties": {
           "operator": {
             "type": "string",
-            "enum": [
-              "gt",
-              "gte",
-              "lt",
-              "lte"
-            ],
+            "enum": ["gt", "gte", "lt", "lte"],
             "description": "Numeric comparison operator.",
             "example": "gt"
           },
@@ -1060,18 +944,12 @@
       },
       "BetweenColorCondition": {
         "type": "object",
-        "required": [
-          "operator",
-          "value",
-          "color"
-        ],
+        "required": ["operator", "value", "color"],
         "description": "Color rule matching when the displayed value falls within an inclusive range.",
         "properties": {
           "operator": {
             "type": "string",
-            "enum": [
-              "between"
-            ],
+            "enum": ["between"],
             "description": "Range comparison operator.",
             "example": "between"
           },
@@ -1083,10 +961,7 @@
               "type": "number"
             },
             "description": "Inclusive [min, max] range. Both bounds must be finite numbers.\n",
-            "example": [
-              100,
-              500
-            ]
+            "example": [100, 500]
           },
           "color": {
             "$ref": "#/components/schemas/ChartPaletteToken",
@@ -1102,19 +977,12 @@
       },
       "EqualityColorCondition": {
         "type": "object",
-        "required": [
-          "operator",
-          "value",
-          "color"
-        ],
+        "required": ["operator", "value", "color"],
         "description": "Color rule matching when the displayed value equals (eq) or does not equal (neq) a number or string.",
         "properties": {
           "operator": {
             "type": "string",
-            "enum": [
-              "eq",
-              "neq"
-            ],
+            "enum": ["eq", "neq"],
             "description": "Equality comparison operator.",
             "example": "eq"
           },
@@ -1182,9 +1050,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "time"
-            ],
+            "enum": ["time"],
             "description": "Series type discriminator. Must be \"time\" for time-series charts.",
             "example": "time"
           },
@@ -1232,9 +1098,7 @@
             },
             "maxItems": 10,
             "description": "Fields to group results by (creates separate series for each group)",
-            "example": [
-              "host"
-            ]
+            "example": ["host"]
           },
           "numberFormat": {
             "$ref": "#/components/schemas/NumberFormat",
@@ -1270,9 +1134,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "table"
-            ],
+            "enum": ["table"],
             "description": "Series type discriminator. Must be \"table\" for table charts.",
             "example": "table"
           },
@@ -1320,9 +1182,7 @@
             },
             "maxItems": 10,
             "description": "Fields to group results by (creates separate rows for each group)",
-            "example": [
-              "errorType"
-            ]
+            "example": ["errorType"]
           },
           "sortOrder": {
             "$ref": "#/components/schemas/SortOrder",
@@ -1347,19 +1207,11 @@
       },
       "NumberChartSeries": {
         "type": "object",
-        "required": [
-          "type",
-          "sourceId",
-          "aggFn",
-          "where",
-          "whereLanguage"
-        ],
+        "required": ["type", "sourceId", "aggFn", "where", "whereLanguage"],
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "number"
-            ],
+            "enum": ["number"],
             "description": "Series type discriminator. Must be \"number\" for single-value number charts.",
             "example": "number"
           },
@@ -1418,19 +1270,11 @@
       },
       "SearchChartSeries": {
         "type": "object",
-        "required": [
-          "type",
-          "sourceId",
-          "fields",
-          "where",
-          "whereLanguage"
-        ],
+        "required": ["type", "sourceId", "fields", "where", "whereLanguage"],
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "search"
-            ],
+            "enum": ["search"],
             "description": "Series type discriminator. Must be \"search\" for search/log viewer charts.",
             "example": "search"
           },
@@ -1445,11 +1289,7 @@
               "type": "string"
             },
             "description": "List of field names to display in the search results table",
-            "example": [
-              "timestamp",
-              "level",
-              "message"
-            ]
+            "example": ["timestamp", "level", "message"]
           },
           "where": {
             "type": "string",
@@ -1465,16 +1305,11 @@
       },
       "MarkdownChartSeries": {
         "type": "object",
-        "required": [
-          "type",
-          "content"
-        ],
+        "required": ["type", "content"],
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "markdown"
-            ],
+            "enum": ["markdown"],
             "description": "Series type discriminator. Must be \"markdown\" for markdown text widgets.",
             "example": "markdown"
           },
@@ -1517,9 +1352,7 @@
       },
       "SelectItem": {
         "type": "object",
-        "required": [
-          "aggFn"
-        ],
+        "required": ["aggFn"],
         "description": "A single aggregated value to compute. The valueExpression must be omitted when aggFn is \"count\", and required for all other functions. The level field may only be used with aggFn \"quantile\".\n",
         "properties": {
           "aggFn": {
@@ -1565,9 +1398,7 @@
           },
           "periodAggFn": {
             "type": "string",
-            "enum": [
-              "delta"
-            ],
+            "enum": ["delta"],
             "description": "Optional period aggregation function for Gauge metrics (e.g., compute the delta over the period).",
             "example": "delta"
           },
@@ -1579,18 +1410,12 @@
       },
       "LineBuilderChartConfig": {
         "type": "object",
-        "required": [
-          "displayType",
-          "sourceId",
-          "select"
-        ],
+        "required": ["displayType", "sourceId", "select"],
         "description": "Builder configuration for a line time-series chart.",
         "properties": {
           "displayType": {
             "type": "string",
-            "enum": [
-              "line"
-            ],
+            "enum": ["line"],
             "description": "Display type discriminator. Must be \"line\" for line charts.",
             "example": "line"
           },
@@ -1647,18 +1472,12 @@
       },
       "BarBuilderChartConfig": {
         "type": "object",
-        "required": [
-          "displayType",
-          "sourceId",
-          "select"
-        ],
+        "required": ["displayType", "sourceId", "select"],
         "description": "Builder configuration for a stacked-bar time-series chart.",
         "properties": {
           "displayType": {
             "type": "string",
-            "enum": [
-              "stacked_bar"
-            ],
+            "enum": ["stacked_bar"],
             "description": "Display type discriminator. Must be \"stacked_bar\" for stacked-bar charts.",
             "example": "stacked_bar"
           },
@@ -1705,18 +1524,12 @@
       },
       "TableBuilderChartConfig": {
         "type": "object",
-        "required": [
-          "displayType",
-          "sourceId",
-          "select"
-        ],
+        "required": ["displayType", "sourceId", "select"],
         "description": "Builder configuration for a table aggregation chart.",
         "properties": {
           "displayType": {
             "type": "string",
-            "enum": [
-              "table"
-            ],
+            "enum": ["table"],
             "description": "Display type discriminator. Must be \"table\" for table charts.",
             "example": "table"
           },
@@ -1775,18 +1588,12 @@
       },
       "NumberBuilderChartConfig": {
         "type": "object",
-        "required": [
-          "displayType",
-          "sourceId",
-          "select"
-        ],
+        "required": ["displayType", "sourceId", "select"],
         "description": "Builder configuration for a single big-number chart.",
         "properties": {
           "displayType": {
             "type": "string",
-            "enum": [
-              "number"
-            ],
+            "enum": ["number"],
             "description": "Display type discriminator. Must be \"number\" for single big-number charts.",
             "example": "number"
           },
@@ -1828,18 +1635,12 @@
       },
       "PieBuilderChartConfig": {
         "type": "object",
-        "required": [
-          "displayType",
-          "sourceId",
-          "select"
-        ],
+        "required": ["displayType", "sourceId", "select"],
         "description": "Builder configuration for a pie chart tile. Each slice represents one group value.",
         "properties": {
           "displayType": {
             "type": "string",
-            "enum": [
-              "pie"
-            ],
+            "enum": ["pie"],
             "description": "Display type discriminator. Must be \"pie\" for pie charts.",
             "example": "pie"
           },
@@ -1883,18 +1684,12 @@
       },
       "CategoricalBarBuilderChartConfig": {
         "type": "object",
-        "required": [
-          "displayType",
-          "sourceId",
-          "select"
-        ],
+        "required": ["displayType", "sourceId", "select"],
         "description": "Builder configuration for a categorical bar chart tile. Each bar represents one group value. Distinct from stacked_bar, which is a time-series chart.\n",
         "properties": {
           "displayType": {
             "type": "string",
-            "enum": [
-              "bar"
-            ],
+            "enum": ["bar"],
             "description": "Display type discriminator. Must be \"bar\" for categorical bar charts.",
             "example": "bar"
           },
@@ -1938,9 +1733,7 @@
       },
       "HeatmapSelectItem": {
         "type": "object",
-        "required": [
-          "valueExpression"
-        ],
+        "required": ["valueExpression"],
         "description": "Single select item for a heatmap tile. The value being bucketed is provided in valueExpression and the count contributing to each bucket in countExpression. The heatmap-specific fields (countExpression, heatmapScaleType) are persisted on the select item, not the chart config. The chart-level discriminator is the HeatmapChartConfig's `displayType: \"heatmap\"`; no aggregation function or alias is exposed on this select item because the heatmap aggregation function is fixed internally and the HeatmapSeriesEditor does not render an alias input.\n",
         "properties": {
           "valueExpression": {
@@ -1958,10 +1751,7 @@
           },
           "heatmapScaleType": {
             "type": "string",
-            "enum": [
-              "log",
-              "linear"
-            ],
+            "enum": ["log", "linear"],
             "description": "Scale type used to bucket values on the y-axis.",
             "example": "log"
           }
@@ -1969,18 +1759,12 @@
       },
       "HeatmapChartConfig": {
         "type": "object",
-        "required": [
-          "displayType",
-          "sourceId",
-          "select"
-        ],
+        "required": ["displayType", "sourceId", "select"],
         "description": "Builder configuration for a heatmap tile. Heatmap is builder-only (no Raw SQL variant) and currently supports trace sources. The row-level filter lives at the chart-config level (where / whereLanguage), matching the HeatmapSeriesEditor in the UI.\n",
         "properties": {
           "displayType": {
             "type": "string",
-            "enum": [
-              "heatmap"
-            ],
+            "enum": ["heatmap"],
             "description": "Display type discriminator. Must be \"heatmap\" for heatmap tiles.",
             "example": "heatmap"
           },
@@ -2018,19 +1802,12 @@
       },
       "SearchChartConfig": {
         "type": "object",
-        "required": [
-          "displayType",
-          "sourceId",
-          "select",
-          "whereLanguage"
-        ],
+        "required": ["displayType", "sourceId", "select", "whereLanguage"],
         "description": "Configuration for a raw-event search / log viewer tile.",
         "properties": {
           "displayType": {
             "type": "string",
-            "enum": [
-              "search"
-            ],
+            "enum": ["search"],
             "description": "Display type discriminator. Must be \"search\" for search/log viewer tiles.",
             "example": "search"
           },
@@ -2060,17 +1837,12 @@
       },
       "EventPatternsChartConfig": {
         "type": "object",
-        "required": [
-          "displayType",
-          "sourceId"
-        ],
+        "required": ["displayType", "sourceId"],
         "description": "Configuration for an event pattern mining tile. Clusters log or trace events by recurring message shapes.",
         "properties": {
           "displayType": {
             "type": "string",
-            "enum": [
-              "event_patterns"
-            ],
+            "enum": ["event_patterns"],
             "description": "Display type discriminator. Must be \"event_patterns\" for pattern mining tiles.",
             "example": "event_patterns"
           },
@@ -2101,16 +1873,12 @@
       },
       "MarkdownChartConfig": {
         "type": "object",
-        "required": [
-          "displayType"
-        ],
+        "required": ["displayType"],
         "description": "Configuration for a freeform Markdown text tile.",
         "properties": {
           "displayType": {
             "type": "string",
-            "enum": [
-              "markdown"
-            ],
+            "enum": ["markdown"],
             "description": "Display type discriminator. Must be \"markdown\" for markdown text tiles.",
             "example": "markdown"
           },
@@ -2124,18 +1892,12 @@
       },
       "RawSqlChartConfigBase": {
         "type": "object",
-        "required": [
-          "configType",
-          "connectionId",
-          "sqlTemplate"
-        ],
+        "required": ["configType", "connectionId", "sqlTemplate"],
         "description": "Shared fields for Raw SQL chart configs. Set configType to \"sql\" and provide connectionId + sqlTemplate instead of sourceId + select.",
         "properties": {
           "configType": {
             "type": "string",
-            "enum": [
-              "sql"
-            ],
+            "enum": ["sql"],
             "description": "Must be \"sql\" to use the Raw SQL chart config variant.",
             "example": "sql"
           },
@@ -2169,15 +1931,11 @@
           },
           {
             "type": "object",
-            "required": [
-              "displayType"
-            ],
+            "required": ["displayType"],
             "properties": {
               "displayType": {
                 "type": "string",
-                "enum": [
-                  "line"
-                ],
+                "enum": ["line"],
                 "description": "Display as a line time-series chart.",
                 "example": "line"
               },
@@ -2213,15 +1971,11 @@
           },
           {
             "type": "object",
-            "required": [
-              "displayType"
-            ],
+            "required": ["displayType"],
             "properties": {
               "displayType": {
                 "type": "string",
-                "enum": [
-                  "stacked_bar"
-                ],
+                "enum": ["stacked_bar"],
                 "description": "Display as a stacked-bar time-series chart.",
                 "example": "stacked_bar"
               },
@@ -2247,15 +2001,11 @@
           },
           {
             "type": "object",
-            "required": [
-              "displayType"
-            ],
+            "required": ["displayType"],
             "properties": {
               "displayType": {
                 "type": "string",
-                "enum": [
-                  "table"
-                ],
+                "enum": ["table"],
                 "description": "Display as a table chart.",
                 "example": "table"
               },
@@ -2275,15 +2025,11 @@
           },
           {
             "type": "object",
-            "required": [
-              "displayType"
-            ],
+            "required": ["displayType"],
             "properties": {
               "displayType": {
                 "type": "string",
-                "enum": [
-                  "number"
-                ],
+                "enum": ["number"],
                 "description": "Display as a single big-number chart.",
                 "example": "number"
               },
@@ -2303,15 +2049,11 @@
           },
           {
             "type": "object",
-            "required": [
-              "displayType"
-            ],
+            "required": ["displayType"],
             "properties": {
               "displayType": {
                 "type": "string",
-                "enum": [
-                  "pie"
-                ],
+                "enum": ["pie"],
                 "description": "Display as a pie chart.",
                 "example": "pie"
               }
@@ -2327,15 +2069,11 @@
           },
           {
             "type": "object",
-            "required": [
-              "displayType"
-            ],
+            "required": ["displayType"],
             "properties": {
               "displayType": {
                 "type": "string",
-                "enum": [
-                  "bar"
-                ],
+                "enum": ["bar"],
                 "description": "Display as a categorical bar chart.",
                 "example": "bar"
               }
@@ -2380,17 +2118,11 @@
       "OnClickFilterTemplate": {
         "type": "object",
         "description": "A templated filter applied to the link-out destination. The rendered template value is combined with the expression as `expression IN (...)` on the destination search or dashboard. Multiple templates sharing the same expression are merged into a single IN clause.\n",
-        "required": [
-          "kind",
-          "expression",
-          "template"
-        ],
+        "required": ["kind", "expression", "template"],
         "properties": {
           "kind": {
             "type": "string",
-            "enum": [
-              "expressionTemplate"
-            ],
+            "enum": ["expressionTemplate"],
             "description": "Filter template kind. Currently only \"expressionTemplate\" is supported.",
             "example": "expressionTemplate"
           },
@@ -2413,16 +2145,11 @@
         "oneOf": [
           {
             "type": "object",
-            "required": [
-              "mode",
-              "id"
-            ],
+            "required": ["mode", "id"],
             "properties": {
               "mode": {
                 "type": "string",
-                "enum": [
-                  "id"
-                ],
+                "enum": ["id"],
                 "description": "Target is a single dashboard or log/trace source",
                 "example": "id"
               },
@@ -2435,16 +2162,11 @@
           },
           {
             "type": "object",
-            "required": [
-              "mode",
-              "template"
-            ],
+            "required": ["mode", "template"],
             "properties": {
               "mode": {
                 "type": "string",
-                "enum": [
-                  "template"
-                ],
+                "enum": ["template"],
                 "description": "Target is matched by name against the template.",
                 "example": "template"
               },
@@ -2463,17 +2185,12 @@
       },
       "OnClickSearch": {
         "type": "object",
-        "required": [
-          "type",
-          "target"
-        ],
+        "required": ["type", "target"],
         "description": "Link-out that navigates to the HyperDX search view.",
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "search"
-            ],
+            "enum": ["search"],
             "description": "OnClick variant discriminator. Must be \"search\" for search link-outs.",
             "example": "search"
           },
@@ -2501,17 +2218,12 @@
       },
       "OnClickDashboard": {
         "type": "object",
-        "required": [
-          "type",
-          "target"
-        ],
+        "required": ["type", "target"],
         "description": "Link-out that navigates to a HyperDX dashboard.",
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "dashboard"
-            ],
+            "enum": ["dashboard"],
             "description": "OnClick variant discriminator. Must be \"dashboard\" for dashboard link-outs.",
             "example": "dashboard"
           },
@@ -2539,17 +2251,12 @@
       },
       "OnClickExternal": {
         "type": "object",
-        "required": [
-          "type",
-          "urlTemplate"
-        ],
+        "required": ["type", "urlTemplate"],
         "description": "Link-out that navigates to an arbitrary external URL (e.g. a Grafana or Langfuse dashboard). The rendered URL must be an absolute http(s) URL.\n",
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "external"
-            ],
+            "enum": ["external"],
             "description": "OnClick variant discriminator. Must be \"external\" for external link-outs.",
             "example": "external"
           },
@@ -2704,10 +2411,7 @@
       "DashboardContainerTab": {
         "type": "object",
         "description": "A single tab inside a dashboard container. Tiles join a tab via tabId.",
-        "required": [
-          "id",
-          "title"
-        ],
+        "required": ["id", "title"],
         "properties": {
           "id": {
             "type": "string",
@@ -2728,11 +2432,7 @@
       "DashboardContainer": {
         "type": "object",
         "description": "A grouping container for tiles on a dashboard. Tiles join a container via containerId.",
-        "required": [
-          "id",
-          "title",
-          "collapsed"
-        ],
+        "required": ["id", "title", "collapsed"],
         "properties": {
           "id": {
             "type": "string",
@@ -2778,13 +2478,7 @@
       "TileBase": {
         "type": "object",
         "description": "Common fields shared by tile input and output",
-        "required": [
-          "name",
-          "x",
-          "y",
-          "w",
-          "h"
-        ],
+        "required": ["name", "x", "y", "w", "h"],
         "properties": {
           "name": {
             "type": "string",
@@ -2845,9 +2539,7 @@
           },
           {
             "type": "object",
-            "required": [
-              "id"
-            ],
+            "required": ["id"],
             "properties": {
               "id": {
                 "type": "string",
@@ -2896,18 +2588,11 @@
       "FilterInput": {
         "type": "object",
         "description": "Dashboard filter key that can be added to a dashboard",
-        "required": [
-          "type",
-          "name",
-          "expression",
-          "sourceId"
-        ],
+        "required": ["type", "name", "expression", "sourceId"],
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "QUERY_EXPRESSION"
-            ],
+            "enum": ["QUERY_EXPRESSION"],
             "description": "Filter type. Must be \"QUERY_EXPRESSION\".",
             "example": "QUERY_EXPRESSION"
           },
@@ -2947,10 +2632,7 @@
           },
           "whereLanguage": {
             "type": "string",
-            "enum": [
-              "sql",
-              "lucene"
-            ],
+            "enum": ["sql", "lucene"],
             "description": "Language of the where condition",
             "default": "sql",
             "example": "lucene"
@@ -2961,9 +2643,7 @@
               "type": "string"
             },
             "description": "Optional list of source IDs this filter applies to. Omit or provide\nan empty array to apply the filter to ALL tiles regardless of source.\nA non-empty array restricts the filter to only tiles whose source ID\nis in the list; tiles using other sources are not affected by the\nselected filter value(s).\n",
-            "example": [
-              "65f5e4a3b9e77c001a111111"
-            ]
+            "example": ["65f5e4a3b9e77c001a111111"]
           }
         }
       },
@@ -2974,9 +2654,7 @@
           },
           {
             "type": "object",
-            "required": [
-              "id"
-            ],
+            "required": ["id"],
             "properties": {
               "id": {
                 "type": "string",
@@ -3016,10 +2694,7 @@
               "maxLength": 32
             },
             "maxItems": 50,
-            "example": [
-              "production",
-              "monitoring"
-            ]
+            "example": ["production", "monitoring"]
           },
           "filters": {
             "type": "array",
@@ -3060,10 +2735,7 @@
       },
       "CreateDashboardRequest": {
         "type": "object",
-        "required": [
-          "name",
-          "tiles"
-        ],
+        "required": ["name", "tiles"],
         "properties": {
           "name": {
             "type": "string",
@@ -3087,9 +2759,7 @@
               "maxLength": 32
             },
             "maxItems": 50,
-            "example": [
-              "development"
-            ]
+            "example": ["development"]
           },
           "filters": {
             "type": "array",
@@ -3130,10 +2800,7 @@
       },
       "UpdateDashboardRequest": {
         "type": "object",
-        "required": [
-          "name",
-          "tiles"
-        ],
+        "required": ["name", "tiles"],
         "properties": {
           "name": {
             "type": "string",
@@ -3157,10 +2824,7 @@
               "maxLength": 32
             },
             "maxItems": 50,
-            "example": [
-              "production",
-              "updated"
-            ]
+            "example": ["production", "updated"]
           },
           "filters": {
             "type": "array",
@@ -3229,16 +2893,12 @@
       },
       "SavedSearchFilter": {
         "type": "object",
-        "required": [
-          "condition"
-        ],
+        "required": ["condition"],
         "description": "A single pinned filter applied to the search. New or changed filters must use the SQL predicate form the UI produces so they render as a sidebar facet: `<column> IN ('<value1>', ...)` (or `NOT IN` / `BETWEEN`). Conditions not in this form are rejected on create, and on update unless they are echoed back unchanged from the stored saved search (so a read-modify-write of a legacy filter still succeeds). Note: existing saved searches created in the UI may also return a Lucene text filter (`type: lucene`) or a structured comparison (`type: sql_ast` with `operator`/`left`/`right`); reads return these stored shapes verbatim, and they are preserved on unchanged update.",
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "sql"
-            ],
+            "enum": ["sql"],
             "default": "sql",
             "description": "Always `sql`. Only SQL predicate filters render in the sidebar.",
             "example": "sql"
@@ -3253,11 +2913,7 @@
       },
       "SavedSearch": {
         "type": "object",
-        "required": [
-          "id",
-          "name",
-          "sourceId"
-        ],
+        "required": ["id", "name", "sourceId"],
         "properties": {
           "id": {
             "type": "string",
@@ -3287,10 +2943,7 @@
           },
           "whereLanguage": {
             "type": "string",
-            "enum": [
-              "lucene",
-              "sql"
-            ],
+            "enum": ["lucene", "sql"],
             "description": "Language used for the where filter.",
             "example": "lucene"
           },
@@ -3307,10 +2960,7 @@
               "maxLength": 32
             },
             "description": "Tags used to organize saved searches.",
-            "example": [
-              "production",
-              "errors"
-            ]
+            "example": ["production", "errors"]
           },
           "filters": {
             "type": "array",
@@ -3350,10 +3000,7 @@
       },
       "SavedSearchInput": {
         "type": "object",
-        "required": [
-          "name",
-          "sourceId"
-        ],
+        "required": ["name", "sourceId"],
         "properties": {
           "name": {
             "type": "string",
@@ -3380,10 +3027,7 @@
           },
           "whereLanguage": {
             "type": "string",
-            "enum": [
-              "lucene",
-              "sql"
-            ],
+            "enum": ["lucene", "sql"],
             "default": "lucene",
             "description": "Language used for the where filter.",
             "example": "lucene"
@@ -3402,10 +3046,7 @@
               "type": "string",
               "maxLength": 32
             },
-            "example": [
-              "production",
-              "errors"
-            ]
+            "example": ["production", "errors"]
           },
           "filters": {
             "type": "array",
@@ -3425,10 +3066,7 @@
       },
       "SavedSearchesListResponse": {
         "type": "object",
-        "required": [
-          "data",
-          "meta"
-        ],
+        "required": ["data", "meta"],
         "properties": {
           "data": {
             "type": "array",
@@ -3454,9 +3092,7 @@
       },
       "SearchRequest": {
         "type": "object",
-        "required": [
-          "sourceId"
-        ],
+        "required": ["sourceId"],
         "properties": {
           "sourceId": {
             "type": "string",
@@ -3484,10 +3120,7 @@
           },
           "whereLanguage": {
             "type": "string",
-            "enum": [
-              "lucene",
-              "sql"
-            ],
+            "enum": ["lucene", "sql"],
             "example": "lucene",
             "default": "lucene",
             "description": "Language used for the where filter. Default is lucene."
@@ -3544,10 +3177,7 @@
       },
       "QuerySetting": {
         "type": "object",
-        "required": [
-          "setting",
-          "value"
-        ],
+        "required": ["setting", "value"],
         "properties": {
           "setting": {
             "type": "string",
@@ -3563,10 +3193,7 @@
       },
       "SourceFrom": {
         "type": "object",
-        "required": [
-          "databaseName",
-          "tableName"
-        ],
+        "required": ["databaseName", "tableName"],
         "properties": {
           "databaseName": {
             "type": "string",
@@ -3582,9 +3209,7 @@
       },
       "MetricSourceFrom": {
         "type": "object",
-        "required": [
-          "databaseName"
-        ],
+        "required": ["databaseName"],
         "properties": {
           "databaseName": {
             "type": "string",
@@ -3632,9 +3257,7 @@
       },
       "HighlightedAttributeExpression": {
         "type": "object",
-        "required": [
-          "sqlExpression"
-        ],
+        "required": ["sqlExpression"],
         "properties": {
           "sqlExpression": {
             "type": "string",
@@ -3657,10 +3280,7 @@
       },
       "AggregatedColumn": {
         "type": "object",
-        "required": [
-          "mvColumn",
-          "aggFn"
-        ],
+        "required": ["mvColumn", "aggFn"],
         "properties": {
           "sourceColumn": {
             "type": "string",
@@ -3769,9 +3389,7 @@
           },
           "kind": {
             "type": "string",
-            "enum": [
-              "log"
-            ],
+            "enum": ["log"],
             "description": "Source kind discriminator. Must be \"log\" for log sources.",
             "example": "log"
           },
@@ -3876,11 +3494,7 @@
           },
           "useTextIndexForImplicitColumn": {
             "type": "string",
-            "enum": [
-              "auto",
-              "enabled",
-              "disabled"
-            ],
+            "enum": ["auto", "enabled", "disabled"],
             "description": "Controls whether lucene rendering uses ClickHouse text indices via hasAllTokens() against the implicit column. \"auto\" detects a covering index at query time, \"enabled\" forces text index usage, \"disabled\" forces a LIKE/hasToken fallback.",
             "nullable": true,
             "example": "auto"
@@ -3976,9 +3590,7 @@
           },
           "kind": {
             "type": "string",
-            "enum": [
-              "trace"
-            ],
+            "enum": ["trace"],
             "description": "Source kind discriminator. Must be \"trace\" for trace sources.",
             "example": "trace"
           },
@@ -4114,11 +3726,7 @@
           },
           "useTextIndexForImplicitColumn": {
             "type": "string",
-            "enum": [
-              "auto",
-              "enabled",
-              "disabled"
-            ],
+            "enum": ["auto", "enabled", "disabled"],
             "description": "Controls whether lucene rendering uses ClickHouse text indices via hasAllTokens() against the implicit column. \"auto\" detects a covering index at query time, \"enabled\" forces text index usage, \"disabled\" forces a LIKE/hasToken fallback.",
             "nullable": true,
             "example": "auto"
@@ -4208,9 +3816,7 @@
           },
           "kind": {
             "type": "string",
-            "enum": [
-              "metric"
-            ],
+            "enum": ["metric"],
             "description": "Source kind discriminator. Must be \"metric\" for metric sources.",
             "example": "metric"
           },
@@ -4255,13 +3861,7 @@
       },
       "SessionSource": {
         "type": "object",
-        "required": [
-          "name",
-          "kind",
-          "connection",
-          "from",
-          "traceSourceId"
-        ],
+        "required": ["name", "kind", "connection", "from", "traceSourceId"],
         "properties": {
           "id": {
             "type": "string",
@@ -4288,9 +3888,7 @@
           },
           "kind": {
             "type": "string",
-            "enum": [
-              "session"
-            ],
+            "enum": ["session"],
             "description": "Source kind discriminator. Must be \"session\" for session sources.",
             "example": "session"
           },
@@ -4360,9 +3958,7 @@
           },
           "kind": {
             "type": "string",
-            "enum": [
-              "promql"
-            ],
+            "enum": ["promql"],
             "description": "Source kind discriminator. Must be \"promql\" for PromQL sources.",
             "example": "promql"
           },
@@ -4442,13 +4038,7 @@
       },
       "SlackWebhook": {
         "type": "object",
-        "required": [
-          "id",
-          "name",
-          "service",
-          "updatedAt",
-          "createdAt"
-        ],
+        "required": ["id", "name", "service", "updatedAt", "createdAt"],
         "properties": {
           "id": {
             "type": "string",
@@ -4462,9 +4052,7 @@
           },
           "service": {
             "type": "string",
-            "enum": [
-              "slack"
-            ],
+            "enum": ["slack"],
             "description": "Webhook service type",
             "example": "slack"
           },
@@ -4494,13 +4082,7 @@
       },
       "IncidentIOWebhook": {
         "type": "object",
-        "required": [
-          "id",
-          "name",
-          "service",
-          "updatedAt",
-          "createdAt"
-        ],
+        "required": ["id", "name", "service", "updatedAt", "createdAt"],
         "properties": {
           "id": {
             "type": "string",
@@ -4514,9 +4096,7 @@
           },
           "service": {
             "type": "string",
-            "enum": [
-              "incidentio"
-            ],
+            "enum": ["incidentio"],
             "description": "Webhook service type",
             "example": "incidentio"
           },
@@ -4546,13 +4126,7 @@
       },
       "GenericWebhook": {
         "type": "object",
-        "required": [
-          "id",
-          "name",
-          "service",
-          "updatedAt",
-          "createdAt"
-        ],
+        "required": ["id", "name", "service", "updatedAt", "createdAt"],
         "properties": {
           "id": {
             "type": "string",
@@ -4566,9 +4140,7 @@
           },
           "service": {
             "type": "string",
-            "enum": [
-              "generic"
-            ],
+            "enum": ["generic"],
             "description": "Webhook service type",
             "example": "generic"
           },
@@ -4624,11 +4196,7 @@
       },
       "PaginationMeta": {
         "type": "object",
-        "required": [
-          "total",
-          "limit",
-          "offset"
-        ],
+        "required": ["total", "limit", "offset"],
         "properties": {
           "total": {
             "type": "integer",
@@ -4649,10 +4217,7 @@
       },
       "WebhooksListResponse": {
         "type": "object",
-        "required": [
-          "data",
-          "meta"
-        ],
+        "required": ["data", "meta"],
         "properties": {
           "data": {
             "type": "array",
@@ -4669,11 +4234,7 @@
       },
       "WebhookInput": {
         "type": "object",
-        "required": [
-          "name",
-          "service",
-          "url"
-        ],
+        "required": ["name", "service", "url"],
         "description": "Webhook create/update body. `body`, `headers`, and `queryParams`\nonly take effect for services that issue a templated HTTP request\n(`generic`, `incidentio`). The `slack` service posts a fixed payload\nto its incoming-webhook URL and ignores them, so supplying any of\nthese fields on a `slack` webhook is rejected. `headers` and\n`queryParams` are write-only — they are accepted here but never\nreturned by any read endpoint, so secrets such as auth tokens do\nnot leak. On\nupdate (PUT), omitted readable fields (`description`, `body`) are\ncleared, while omitted `headers`/`queryParams` are preserved —\nsend an explicit `{}` to clear them. Exception: if the destination\n(`url` or `service`) changes, omitted `headers`/`queryParams` are\ncleared rather than preserved, so stored secrets are never forwarded\nto a new destination; re-supply them for the new destination.\n",
         "properties": {
           "name": {
@@ -4684,11 +4245,7 @@
           },
           "service": {
             "type": "string",
-            "enum": [
-              "slack",
-              "incidentio",
-              "generic"
-            ],
+            "enum": ["slack", "incidentio", "generic"],
             "description": "Webhook service type.",
             "example": "slack"
           },
@@ -4756,9 +4313,7 @@
         "summary": "Get Alert",
         "description": "Retrieves a specific alert by ID",
         "operationId": "getAlert",
-        "tags": [
-          "Alerts"
-        ],
+        "tags": ["Alerts"],
         "parameters": [
           {
             "name": "id",
@@ -4843,9 +4398,7 @@
         "summary": "Update Alert",
         "description": "Updates an existing alert",
         "operationId": "updateAlert",
-        "tags": [
-          "Alerts"
-        ],
+        "tags": ["Alerts"],
         "parameters": [
           {
             "name": "id",
@@ -4944,9 +4497,7 @@
         "summary": "Delete Alert",
         "description": "Deletes an alert",
         "operationId": "deleteAlert",
-        "tags": [
-          "Alerts"
-        ],
+        "tags": ["Alerts"],
         "parameters": [
           {
             "name": "id",
@@ -5009,9 +4560,7 @@
         "summary": "List Alerts",
         "description": "Retrieves alerts for the authenticated team (paginated). Results are capped at `limit` (default and maximum 1000). When more records exist than are returned, `meta.total` exceeds `data.length`; clients with large collections must page with `limit`/`offset` to retrieve them all.",
         "operationId": "listAlerts",
-        "tags": [
-          "Alerts"
-        ],
+        "tags": ["Alerts"],
         "parameters": [
           {
             "name": "limit",
@@ -5108,9 +4657,7 @@
         "summary": "Create Alert",
         "description": "Creates a new alert",
         "operationId": "createAlert",
-        "tags": [
-          "Alerts"
-        ],
+        "tags": ["Alerts"],
         "requestBody": {
           "required": true,
           "content": {
@@ -5190,9 +4737,7 @@
         "summary": "Query Chart Series Data",
         "description": "Retrieves time series data based on configured series parameters",
         "operationId": "queryChartSeries",
-        "tags": [
-          "Charts"
-        ],
+        "tags": ["Charts"],
         "requestBody": {
           "required": true,
           "content": {
@@ -5228,18 +4773,14 @@
                         "sourceId": "65f5e4a3b9e77c001a123456",
                         "aggFn": "count",
                         "where": "SeverityText:error",
-                        "groupBy": [
-                          "service"
-                        ]
+                        "groupBy": ["service"]
                       },
                       {
                         "sourceId": "65f5e4a3b9e77c001a123456",
                         "aggFn": "avg",
                         "field": "duration",
                         "where": "SeverityText:error",
-                        "groupBy": [
-                          "service"
-                        ]
+                        "groupBy": ["service"]
                       }
                     ]
                   }
@@ -5325,23 +4866,17 @@
                         {
                           "ts_bucket": 1647014400000,
                           "series_0.data": 15,
-                          "group": [
-                            "api"
-                          ]
+                          "group": ["api"]
                         },
                         {
                           "ts_bucket": 1647014400000,
                           "series_0.data": 8,
-                          "group": [
-                            "frontend"
-                          ]
+                          "group": ["frontend"]
                         },
                         {
                           "ts_bucket": 1647018000000,
                           "series_0.data": 22,
-                          "group": [
-                            "api"
-                          ]
+                          "group": ["api"]
                         }
                       ]
                     }
@@ -5439,9 +4974,7 @@
         "summary": "List Connections",
         "description": "Retrieves a list of all ClickHouse connections for the authenticated team. Passwords are never returned.",
         "operationId": "listConnections",
-        "tags": [
-          "Connections"
-        ],
+        "tags": ["Connections"],
         "responses": {
           "200": {
             "description": "Successfully retrieved connections",
@@ -5482,9 +5015,7 @@
         "summary": "Create Connection",
         "description": "Creates a new ClickHouse connection",
         "operationId": "createConnection",
-        "tags": [
-          "Connections"
-        ],
+        "tags": ["Connections"],
         "requestBody": {
           "required": true,
           "content": {
@@ -5540,9 +5071,7 @@
         "summary": "Get Connection",
         "description": "Retrieves a specific ClickHouse connection by ID. Passwords are never returned.",
         "operationId": "getConnection",
-        "tags": [
-          "Connections"
-        ],
+        "tags": ["Connections"],
         "parameters": [
           {
             "name": "id",
@@ -5598,9 +5127,7 @@
         "summary": "Update Connection",
         "description": "Updates an existing ClickHouse connection.\n\nField semantics: if `password` is omitted or empty the existing\npassword is kept. `hyperdxSettingPrefix` is cleared when set to null\nor an empty string, and `prometheusEndpoint` is cleared when set to\nnull; both are kept unchanged when omitted.\n",
         "operationId": "updateConnection",
-        "tags": [
-          "Connections"
-        ],
+        "tags": ["Connections"],
         "parameters": [
           {
             "name": "id",
@@ -5679,9 +5206,7 @@
         "summary": "Delete Connection",
         "description": "Deletes a ClickHouse connection",
         "operationId": "deleteConnection",
-        "tags": [
-          "Connections"
-        ],
+        "tags": ["Connections"],
         "parameters": [
           {
             "name": "id",
@@ -5740,9 +5265,7 @@
         "summary": "List Dashboards",
         "description": "Retrieves a list of all dashboards for the authenticated team",
         "operationId": "listDashboards",
-        "tags": [
-          "Dashboards"
-        ],
+        "tags": ["Dashboards"],
         "responses": {
           "200": {
             "description": "Successfully retrieved dashboards",
@@ -5780,10 +5303,7 @@
                               }
                             }
                           ],
-                          "tags": [
-                            "infrastructure",
-                            "monitoring"
-                          ],
+                          "tags": ["infrastructure", "monitoring"],
                           "filters": [
                             {
                               "id": "65f5e4a3b9e77c001a301001",
@@ -5819,10 +5339,7 @@
                               }
                             }
                           ],
-                          "tags": [
-                            "api",
-                            "monitoring"
-                          ],
+                          "tags": ["api", "monitoring"],
                           "filters": [
                             {
                               "id": "65f5e4a3b9e77c001a301002",
@@ -5849,9 +5366,7 @@
         "summary": "Create Dashboard",
         "description": "Creates a new dashboard",
         "operationId": "createDashboard",
-        "tags": [
-          "Dashboards"
-        ],
+        "tags": ["Dashboards"],
         "requestBody": {
           "required": true,
           "content": {
@@ -5883,10 +5398,7 @@
                         }
                       }
                     ],
-                    "tags": [
-                      "api",
-                      "monitoring"
-                    ],
+                    "tags": ["api", "monitoring"],
                     "filters": [
                       {
                         "type": "QUERY_EXPRESSION",
@@ -5939,10 +5451,7 @@
                         }
                       }
                     ],
-                    "tags": [
-                      "service-health",
-                      "production"
-                    ],
+                    "tags": ["service-health", "production"],
                     "filters": [
                       {
                         "type": "QUERY_EXPRESSION",
@@ -5992,10 +5501,7 @@
                             }
                           }
                         ],
-                        "tags": [
-                          "api",
-                          "monitoring"
-                        ],
+                        "tags": ["api", "monitoring"],
                         "filters": [
                           {
                             "id": "65f5e4a3b9e77c001a301004",
@@ -6059,9 +5565,7 @@
         "summary": "Get Dashboard",
         "description": "Retrieves a specific dashboard by ID",
         "operationId": "getDashboard",
-        "tags": [
-          "Dashboards"
-        ],
+        "tags": ["Dashboards"],
         "parameters": [
           {
             "name": "id",
@@ -6129,10 +5633,7 @@
                             }
                           }
                         ],
-                        "tags": [
-                          "infrastructure",
-                          "monitoring"
-                        ],
+                        "tags": ["infrastructure", "monitoring"],
                         "filters": [
                           {
                             "id": "65f5e4a3b9e77c001a301003",
@@ -6181,9 +5682,7 @@
         "summary": "Update Dashboard",
         "description": "Updates an existing dashboard.\n\n**Concurrency:** This endpoint does not support optimistic\nconcurrency control. Concurrent PUT requests for the same\ndashboard may silently overwrite each other, which can leave\norphan tile-to-container references on layout-shape edits.\nClients should serialize edits to a given dashboard.\n",
         "operationId": "updateDashboard",
-        "tags": [
-          "Dashboards"
-        ],
+        "tags": ["Dashboards"],
         "parameters": [
           {
             "name": "id",
@@ -6246,10 +5745,7 @@
                         }
                       }
                     ],
-                    "tags": [
-                      "production",
-                      "updated"
-                    ],
+                    "tags": ["production", "updated"],
                     "filters": [
                       {
                         "id": "65f5e4a3b9e77c001a301005",
@@ -6318,10 +5814,7 @@
                             }
                           }
                         ],
-                        "tags": [
-                          "production",
-                          "updated"
-                        ],
+                        "tags": ["production", "updated"],
                         "filters": [
                           {
                             "id": "65f5e4a3b9e77c001a301005",
@@ -6396,9 +5889,7 @@
         "summary": "Delete Dashboard",
         "description": "Deletes a dashboard",
         "operationId": "deleteDashboard",
-        "tags": [
-          "Dashboards"
-        ],
+        "tags": ["Dashboards"],
         "parameters": [
           {
             "name": "id",
@@ -6457,9 +5948,7 @@
         "summary": "Validate Dashboard",
         "description": "Validates a dashboard body against the same schema and tile rules used\nby POST /api/v2/dashboards. The dashboard is **never persisted**. Use\nthis endpoint at plan time (e.g. from a Terraform provider) to check\nthat a dashboard configuration is valid before applying it.\n",
         "operationId": "validateDashboard",
-        "tags": [
-          "Dashboards"
-        ],
+        "tags": ["Dashboards"],
         "requestBody": {
           "required": true,
           "content": {
@@ -6477,11 +5966,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "valid",
-                    "errors",
-                    "normalized"
-                  ],
+                  "required": ["valid", "errors", "normalized"],
                   "properties": {
                     "valid": {
                       "type": "boolean",
@@ -6492,10 +5977,7 @@
                       "description": "Validation errors. Empty when valid is true.",
                       "items": {
                         "type": "object",
-                        "required": [
-                          "path",
-                          "message"
-                        ],
+                        "required": ["path", "message"],
                         "properties": {
                           "path": {
                             "type": "string",
@@ -6565,9 +6047,7 @@
         "summary": "List Saved Searches",
         "description": "Retrieves saved searches for the authenticated team (paginated). Results are capped at `limit` (default and maximum 1000). When more records exist than are returned, `meta.total` exceeds `data.length`; clients with large collections must page with `limit`/`offset` to retrieve them all.",
         "operationId": "listSavedSearches",
-        "tags": [
-          "Saved Searches"
-        ],
+        "tags": ["Saved Searches"],
         "parameters": [
           {
             "name": "limit",
@@ -6630,9 +6110,7 @@
         "summary": "Create Saved Search",
         "description": "Creates a new saved search.",
         "operationId": "createSavedSearch",
-        "tags": [
-          "Saved Searches"
-        ],
+        "tags": ["Saved Searches"],
         "requestBody": {
           "required": true,
           "content": {
@@ -6692,9 +6170,7 @@
         "summary": "Get Saved Search",
         "description": "Retrieves a specific saved search by ID.",
         "operationId": "getSavedSearch",
-        "tags": [
-          "Saved Searches"
-        ],
+        "tags": ["Saved Searches"],
         "parameters": [
           {
             "name": "id",
@@ -6754,9 +6230,7 @@
         "summary": "Update Saved Search",
         "description": "Updates an existing saved search. This is a full replace: send the\nfull object. Every optional field (`select`, `where`, `whereLanguage`,\n`orderBy`, `tags`, `filters`) is always written and falls back to its\ndefault when omitted, so omitting a field resets it rather than\npreserving the stored value.\n",
         "operationId": "updateSavedSearch",
-        "tags": [
-          "Saved Searches"
-        ],
+        "tags": ["Saved Searches"],
         "parameters": [
           {
             "name": "id",
@@ -6836,9 +6310,7 @@
         "summary": "Delete Saved Search",
         "description": "Deletes a saved search and any alerts attached to it.",
         "operationId": "deleteSavedSearch",
-        "tags": [
-          "Saved Searches"
-        ],
+        "tags": ["Saved Searches"],
         "parameters": [
           {
             "name": "id",
@@ -6901,9 +6373,7 @@
         "summary": "Search Raw Logs and Traces",
         "description": "Fetch individual log or trace rows from a HyperDX source.\n\nThis endpoint mirrors the \"search\" panel mode in the HyperDX UI.\nHyperDX applies the same query optimizations used in the UI:\n  - Named attribute columns (e.g. \"pipedream.pipeline_name\") are\n    rewritten to their indexed materialized equivalents when the\n    source schema exposes them, avoiding slow Map lookups.\n  - Rows are ordered by timestamp descending (most recent first).\n  - The source's built-in PREWHERE / partition pruning is applied.\n\nAuthentication: Bearer token (personal API key from Team Settings).\n",
         "operationId": "searchEvents",
-        "tags": [
-          "Search"
-        ],
+        "tags": ["Search"],
         "requestBody": {
           "required": true,
           "content": {
@@ -7037,9 +6507,7 @@
         "summary": "List Sources",
         "description": "Retrieves a list of all sources for the authenticated team",
         "operationId": "listSources",
-        "tags": [
-          "Sources"
-        ],
+        "tags": ["Sources"],
         "responses": {
           "200": {
             "description": "Successfully retrieved sources",
@@ -7080,9 +6548,7 @@
         "summary": "Create Source",
         "description": "Creates a new source.\n\nThe request body is a source object without the `id` field. If an\n`id` is sent anyway it is silently ignored (stripped before\nvalidation — the request is never rejected because of it).\nGranularity fields\n(`materializedViews[].minGranularity` and\n`metadataMaterializedViews.granularity`) accept the same short format\nthe API returns (e.g. `5m`, `15s`, `1h`, `1d`).\n",
         "operationId": "createSource",
-        "tags": [
-          "Sources"
-        ],
+        "tags": ["Sources"],
         "requestBody": {
           "required": true,
           "content": {
@@ -7148,9 +6614,7 @@
         "summary": "Get Source",
         "description": "Retrieves a specific source by ID",
         "operationId": "getSource",
-        "tags": [
-          "Sources"
-        ],
+        "tags": ["Sources"],
         "parameters": [
           {
             "name": "id",
@@ -7216,9 +6680,7 @@
         "summary": "Update Source",
         "description": "Updates an existing source. The full source object must be provided;\nthis is a replace, not a patch.\n\nThe request body is a source object without the `id` field. If an\n`id` is sent anyway it is silently ignored (stripped before\nvalidation — never a 400); the path parameter alone identifies the\nsource. Granularity fields (`materializedViews[].minGranularity` and\n`metadataMaterializedViews.granularity`) accept the same short format\nthe API returns (e.g. `5m`, `15s`, `1h`, `1d`).\n",
         "operationId": "updateSource",
-        "tags": [
-          "Sources"
-        ],
+        "tags": ["Sources"],
         "parameters": [
           {
             "name": "id",
@@ -7307,9 +6769,7 @@
         "summary": "Delete Source",
         "description": "Deletes a source",
         "operationId": "deleteSource",
-        "tags": [
-          "Sources"
-        ],
+        "tags": ["Sources"],
         "parameters": [
           {
             "name": "id",
@@ -7378,9 +6838,7 @@
         "summary": "Get Team",
         "description": "Retrieves the authenticated team's basic settings.",
         "operationId": "getTeam",
-        "tags": [
-          "Team"
-        ],
+        "tags": ["Team"],
         "responses": {
           "200": {
             "description": "Successfully retrieved team"
@@ -7396,9 +6854,7 @@
         "summary": "List Team Members",
         "description": "Retrieves the team's members.",
         "operationId": "listTeamMembers",
-        "tags": [
-          "Team"
-        ],
+        "tags": ["Team"],
         "responses": {
           "200": {
             "description": "Successfully retrieved members"
@@ -7411,9 +6867,7 @@
         "summary": "Invite Team Member",
         "description": "Creates a pending invitation for a new email address.",
         "operationId": "inviteTeamMember",
-        "tags": [
-          "Team"
-        ],
+        "tags": ["Team"],
         "responses": {
           "200": {
             "description": "Successfully created the invitation"
@@ -7429,9 +6883,7 @@
         "summary": "List Team Invitations",
         "description": "Retrieves the team's pending invitations.",
         "operationId": "listTeamInvitations",
-        "tags": [
-          "Team"
-        ],
+        "tags": ["Team"],
         "responses": {
           "200": {
             "description": "Successfully retrieved invitations"
@@ -7444,9 +6896,7 @@
         "summary": "Delete Team Invitation",
         "description": "Deletes a pending team invitation.",
         "operationId": "deleteTeamInvitation",
-        "tags": [
-          "Team"
-        ],
+        "tags": ["Team"],
         "parameters": [
           {
             "name": "id",
@@ -7472,9 +6922,7 @@
         "summary": "Remove Team Member",
         "description": "Removes a member from the team.",
         "operationId": "removeTeamMember",
-        "tags": [
-          "Team"
-        ],
+        "tags": ["Team"],
         "parameters": [
           {
             "name": "id",
@@ -7503,9 +6951,7 @@
         "summary": "List Webhooks",
         "description": "Retrieves webhooks for the authenticated team (paginated). Results are capped at `limit` (default and maximum 1000). When more records exist than are returned, `meta.total` exceeds `data.length`; clients with large collections must page with `limit`/`offset` to retrieve them all.",
         "operationId": "listWebhooks",
-        "tags": [
-          "Webhooks"
-        ],
+        "tags": ["Webhooks"],
         "parameters": [
           {
             "name": "limit",
@@ -7571,9 +7017,7 @@
         "summary": "Create Webhook",
         "description": "Creates a new webhook for the authenticated team.",
         "operationId": "createWebhook",
-        "tags": [
-          "Webhooks"
-        ],
+        "tags": ["Webhooks"],
         "requestBody": {
           "required": true,
           "content": {
@@ -7633,9 +7077,7 @@
         "summary": "Update Webhook",
         "description": "Replaces an existing webhook. Readable optional fields\n(`description`, `body`) are a full replace: omitting them clears\nthem. The write-only fields `headers` and `queryParams` are never\nreturned on read, so omitting them preserves the stored values;\nsend an explicit empty object (`{}`) to clear them. Exception: if the\ndestination (`url` or `service`) changes, omitted `headers`/\n`queryParams` are cleared rather than preserved so stored secrets are\nnever forwarded to a new destination.\n",
         "operationId": "updateWebhook",
-        "tags": [
-          "Webhooks"
-        ],
+        "tags": ["Webhooks"],
         "parameters": [
           {
             "name": "id",
@@ -7725,9 +7167,7 @@
         "summary": "Delete Webhook",
         "description": "Deletes a webhook. Blocked with a 409 while any alert still references it — reassign or remove those alerts first — so deletion never leaves an alert pointing at a missing webhook (which would silently drop notifications). Mirrors the internal webhook delete guard.",
         "operationId": "deleteWebhook",
-        "tags": [
-          "Webhooks"
-        ],
+        "tags": ["Webhooks"],
         "parameters": [
           {
             "name": "id",
