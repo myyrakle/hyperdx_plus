@@ -1,11 +1,13 @@
 import { ClickhouseClient } from '@hyperdx/common-utils/dist/clickhouse/node';
 import { getMetadata } from '@hyperdx/common-utils/dist/core/metadata';
+import { getFirstTimestampValueExpression } from '@hyperdx/common-utils/dist/core/utils';
 import {
   type BuilderChartConfigWithDateRange,
   type ChartConfigWithDateRange,
   DisplayType,
   SourceKind,
 } from '@hyperdx/common-utils/dist/types';
+import ms from 'ms';
 import { z } from 'zod';
 
 import { getConnectionById } from '@/controllers/connection';
@@ -16,6 +18,18 @@ import {
 } from '@/mcp/tools/query/helpers';
 import type { ToolRegistrar } from '@/mcp/tools/types';
 import { mcpUserError } from '@/mcp/utils/errors';
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+/**
+ * Default look-back window when a caller passes `traceId` without `startTime`.
+ * The span/log queries for a single trace are bounded by this window so they
+ * never scan the whole retention period (older parts live on a cold S3 volume
+ * and a TraceId bloom-filter lookup across them is expensive). The generic
+ * 15-minute default is too narrow for "look up this trace" calls.
+ */
+const TRACE_ID_LOOKUP_DEFAULT_WINDOW_MS = ms('7d');
+const TRACE_ID_LOOKUP_DEFAULT_WINDOW_LABEL = '7 days';
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
@@ -32,6 +46,9 @@ const traceSchema = z.object({
     .describe(
       'Specific TraceId to look up. When provided, the tool fetches every span ' +
         'in this trace and returns them as a parent/child tree. ' +
+        `Spans are only searched within startTime/endTime; when startTime is omitted ` +
+        `the window defaults to the last ${TRACE_ID_LOOKUP_DEFAULT_WINDOW_LABEL} before endTime. ` +
+        'For older traces, pass an explicit startTime (ideally a tight window around the trace). ' +
         'When omitted, the tool auto-picks one trace using pickFilter + pickBy.',
     ),
   pickFilter: z
@@ -65,12 +82,18 @@ const traceSchema = z.object({
     .string()
     .optional()
     .describe(
-      'Start of the search window as ISO 8601. Default: 15 minutes ago.',
+      'Start of the search window as ISO 8601. Bounds both the trace pick and ' +
+        'the span/log fetch. Default: 15 minutes before endTime when auto-picking; ' +
+        `${TRACE_ID_LOOKUP_DEFAULT_WINDOW_LABEL} before endTime when traceId is provided. ` +
+        `Traces older than ${TRACE_ID_LOOKUP_DEFAULT_WINDOW_LABEL} require an explicit startTime.`,
     ),
   endTime: z
     .string()
     .optional()
-    .describe('End of the search window as ISO 8601. Default: now.'),
+    .describe(
+      'End of the search window as ISO 8601. Bounds both the trace pick and ' +
+        'the span/log fetch. Default: now.',
+    ),
   maxSpans: z
     .number()
     .min(1)
@@ -191,6 +214,10 @@ export function registerTraceWaterfall({
         '  1. Specific trace: pass `traceId`. Returns every span in that trace.\n' +
         '  2. Auto-pick: pass `pickFilter` + `pickBy`. The tool finds one matching trace ' +
         '(slowest / first_error / most_recent) and returns its full tree.\n\n' +
+        'Time window: spans and correlated logs are only read within startTime/endTime. ' +
+        `With traceId and no startTime, the window defaults to the last ${TRACE_ID_LOOKUP_DEFAULT_WINDOW_LABEL}; ` +
+        'pass startTime explicitly for older traces. In auto-pick mode the default ' +
+        'window is the last 15 minutes.\n\n' +
         'Each returned span has: depth (root=0), spanId, parentSpanId, serviceName, ' +
         'spanName, spanKind, durationMs, statusCode, statusMessage, timestamp, and ' +
         'spanAttributes. Spans are pre-order DFS — child spans follow their parent in ' +
@@ -212,7 +239,20 @@ export function registerTraceWaterfall({
     },
     async (rawInput: TraceInput) => {
       const input = traceSchema.parse(rawInput);
-      const timeRange = parseTimeRange(input.startTime, input.endTime);
+      // A traceId lookup without an explicit startTime gets a 7-day window
+      // (instead of the generic 15-minute default) so the span/log queries
+      // stay bounded without being too narrow to find the trace.
+      let startTime = input.startTime;
+      if (input.traceId && !startTime) {
+        const end = input.endTime ? new Date(input.endTime) : new Date();
+        // Invalid endTime is reported by parseTimeRange below.
+        if (!isNaN(end.getTime())) {
+          startTime = new Date(
+            end.getTime() - TRACE_ID_LOOKUP_DEFAULT_WINDOW_MS,
+          ).toISOString();
+        }
+      }
+      const timeRange = parseTimeRange(startTime, input.endTime);
       if ('error' in timeRange) {
         return mcpUserError(timeRange.error);
       }
@@ -260,6 +300,19 @@ export function registerTraceWaterfall({
       const statusMessageExpr = source.statusMessageExpression ?? "''";
       const attrsExpr = source.eventAttributesExpression ?? 'map()';
       const divisor = durationDivisor(source.durationPrecision);
+      // Time window applied to the span and log fetches. Without it a TraceId
+      // lookup scans the whole retention period (incl. cold S3 parts).
+      const windowParams = {
+        startMs: startDate.getTime(),
+        endMs: endDate.getTime(),
+      };
+      const timeWindowCondition = (expr: string) => {
+        const col = getFirstTimestampValueExpression(expr);
+        return (
+          `${col} >= fromUnixTimestamp64Milli({startMs:Int64}) AND ` +
+          `${col} <= fromUnixTimestamp64Milli({endMs:Int64})`
+        );
+      };
 
       // ── Step 1: pick a TraceId (unless one was provided) ──
       let pickedTraceId = input.traceId;
@@ -377,6 +430,7 @@ export function registerTraceWaterfall({
           ${attrsExpr} AS spanAttributes
         FROM {db:Identifier}.{tbl:Identifier}
         WHERE ${traceIdExpr} = {tid:String}
+          AND ${timeWindowCondition(tsExpr)}
         ORDER BY ${tsExpr} ASC
         LIMIT {n:UInt32}
       `;
@@ -391,6 +445,7 @@ export function registerTraceWaterfall({
             tid: pickedTraceId,
             n: input.maxSpans + 1, // +1 to detect truncation
             divisor,
+            ...windowParams,
           },
           format: 'JSONEachRow',
           connectionId: source.connection.toString(),
@@ -425,7 +480,14 @@ export function registerTraceWaterfall({
                 {
                   result: null,
                   traceId: pickedTraceId,
-                  hint: 'TraceId picked, but no spans exist in the time window. The trace may have spans outside startTime/endTime — widen the window.',
+                  timeRange: {
+                    startTime: startDate.toISOString(),
+                    endTime: endDate.toISOString(),
+                  },
+                  hint: input.traceId
+                    ? `No spans found for this TraceId between startTime and endTime (default window for traceId lookups: last ${TRACE_ID_LOOKUP_DEFAULT_WINDOW_LABEL}). ` +
+                      'The trace may be older than the window or the TraceId may be wrong — pass an earlier startTime to widen it.'
+                    : 'TraceId picked, but no spans exist in the time window. The trace may have spans outside startTime/endTime — widen the window.',
                 },
                 null,
                 2,
@@ -498,6 +560,7 @@ export function registerTraceWaterfall({
                 ${logSpanIdExpr} AS spanId
               FROM {db:Identifier}.{tbl:Identifier}
               WHERE ${logTraceIdExpr} = {tid:String}
+                AND ${timeWindowCondition(logTsExpr)}
               ORDER BY ${logTsExpr} ASC
               LIMIT {n:UInt32}
             `;
@@ -509,6 +572,7 @@ export function registerTraceWaterfall({
                   tbl: logSource.from.tableName,
                   tid: pickedTraceId,
                   n: input.maxLogs + 1, // +1 to detect truncation
+                  ...windowParams,
                 },
                 format: 'JSONEachRow',
                 connectionId: logSource.connection.toString(),

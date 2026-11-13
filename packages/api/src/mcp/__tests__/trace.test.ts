@@ -430,6 +430,145 @@ describe('MCP Trace Tools', () => {
         expect(output.traceId).toBe(TRACE_ID);
         expect(output.spanCount).toBeGreaterThan(0);
       });
+
+      it('should apply the explicit time window to the span fetch when traceId is passed', async () => {
+        // Window that ends before the seeded spans → nothing is read.
+        const result = await callTool(client, 'clickstack_trace_waterfall', {
+          sourceId: traceSource._id.toString(),
+          traceId: TRACE_ID,
+          startTime: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString(),
+          endTime: new Date(now.getTime() - 60 * 60 * 1000).toISOString(),
+        });
+
+        expect(result.isError).toBeFalsy();
+        const output = JSON.parse(getFirstText(result));
+        expect(output.result).toBeNull();
+        expect(output.traceId).toBe(TRACE_ID);
+        expect(output.hint).toContain('startTime');
+        expect(output.timeRange).toBeDefined();
+      });
+
+      it('should apply the time window to correlated logs', async () => {
+        await bulkInsertLogs([
+          {
+            Timestamp: fiveMinAgo,
+            TraceId: TRACE_ID,
+            SpanId: ROOT_SPAN_ID,
+            Body: 'wf-window in-window log',
+            ServiceName: WF_SVC,
+            SeverityText: 'INFO',
+          },
+          {
+            // Same TraceId but well outside the requested window.
+            Timestamp: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
+            TraceId: TRACE_ID,
+            SpanId: ROOT_SPAN_ID,
+            Body: 'wf-window out-of-window log',
+            ServiceName: WF_SVC,
+            SeverityText: 'INFO',
+          },
+        ]);
+
+        const result = await callTool(client, 'clickstack_trace_waterfall', {
+          sourceId: traceSource._id.toString(),
+          traceId: TRACE_ID,
+          startTime: new Date(now.getTime() - 10 * 60 * 1000).toISOString(),
+          endTime: new Date(now.getTime() + 60 * 1000).toISOString(),
+        });
+
+        expect(result.isError).toBeFalsy();
+        const output = JSON.parse(getFirstText(result));
+        const bodies = (output.logs ?? []).map((l: any) => l.body);
+        expect(bodies).toContain('wf-window in-window log');
+        expect(bodies).not.toContain('wf-window out-of-window log');
+      });
+
+      it('should default to a 7-day window when traceId is passed without startTime', async () => {
+        // The seeded spans are 5 minutes old, which the generic 15-minute
+        // default would also cover, so also check a 3-day-old trace.
+        const MID_TRACE_ID = 'wfwin0003daysold000000000000000a';
+        const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+        await bulkInsertTraces([
+          {
+            Timestamp: threeDaysAgo,
+            TraceId: MID_TRACE_ID,
+            SpanId: 'wfwin_mid_root01',
+            ParentSpanId: '',
+            SpanName: 'GET /wf-window/mid',
+            SpanKind: 'SPAN_KIND_SERVER',
+            ServiceName: WF_SVC,
+            Duration: 10_000_000,
+            StatusCode: 'STATUS_CODE_OK',
+          },
+        ]);
+
+        const recent = await callTool(client, 'clickstack_trace_waterfall', {
+          sourceId: traceSource._id.toString(),
+          traceId: TRACE_ID,
+        });
+        expect(recent.isError).toBeFalsy();
+        // otel_traces is not truncated between tests and beforeEach re-seeds
+        // the same spans, so only assert that the trace was found.
+        const recentOutput = JSON.parse(getFirstText(recent));
+        expect(recentOutput.traceId).toBe(TRACE_ID);
+        expect(recentOutput.spanCount).toBeGreaterThanOrEqual(3);
+
+        const mid = await callTool(client, 'clickstack_trace_waterfall', {
+          sourceId: traceSource._id.toString(),
+          traceId: MID_TRACE_ID,
+        });
+        expect(mid.isError).toBeFalsy();
+        const midOutput = JSON.parse(getFirstText(mid));
+        expect(midOutput.traceId).toBe(MID_TRACE_ID);
+        expect(midOutput.spanCount).toBeGreaterThanOrEqual(1);
+      });
+
+      it('should not find a trace older than 7 days without startTime, but respect an explicit startTime', async () => {
+        const OLD_TRACE_ID = 'wfwin0010daysold000000000000000b';
+        const tenDaysAgo = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000);
+        await bulkInsertTraces([
+          {
+            Timestamp: tenDaysAgo,
+            TraceId: OLD_TRACE_ID,
+            SpanId: 'wfwin_old_root01',
+            ParentSpanId: '',
+            SpanName: 'GET /wf-window/old',
+            SpanKind: 'SPAN_KIND_SERVER',
+            ServiceName: WF_SVC,
+            Duration: 10_000_000,
+            StatusCode: 'STATUS_CODE_OK',
+          },
+        ]);
+
+        const defaultWindow = await callTool(
+          client,
+          'clickstack_trace_waterfall',
+          {
+            sourceId: traceSource._id.toString(),
+            traceId: OLD_TRACE_ID,
+          },
+        );
+        expect(defaultWindow.isError).toBeFalsy();
+        const defaultOutput = JSON.parse(getFirstText(defaultWindow));
+        expect(defaultOutput.result).toBeNull();
+        expect(defaultOutput.hint).toContain('7 days');
+        expect(defaultOutput.hint).toContain('startTime');
+
+        const explicit = await callTool(client, 'clickstack_trace_waterfall', {
+          sourceId: traceSource._id.toString(),
+          traceId: OLD_TRACE_ID,
+          startTime: new Date(
+            tenDaysAgo.getTime() - 60 * 60 * 1000,
+          ).toISOString(),
+          endTime: new Date(
+            tenDaysAgo.getTime() + 60 * 60 * 1000,
+          ).toISOString(),
+        });
+        expect(explicit.isError).toBeFalsy();
+        const explicitOutput = JSON.parse(getFirstText(explicit));
+        expect(explicitOutput.traceId).toBe(OLD_TRACE_ID);
+        expect(explicitOutput.spanCount).toBeGreaterThanOrEqual(1);
+      });
     });
 
     describe('first_error pick mode', () => {
