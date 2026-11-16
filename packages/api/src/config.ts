@@ -35,6 +35,17 @@ export const INGESTION_API_KEY = env.INGESTION_API_KEY ?? '';
 export const ENABLE_DATADOG_RECEIVER = env.ENABLE_DATADOG_RECEIVER === 'true';
 export const HYPERDX_API_KEY = env.HYPERDX_API_KEY as string;
 export const HYPERDX_LOG_LEVEL = env.HYPERDX_LOG_LEVEL as string;
+// MCP trace waterfall: default lookback (days) when a traceId is given without
+// startTime. Keep it below the hot-volume retention so lookups don't reach the
+// cold (S3) volume. Invalid or non-positive values fall back to 3.
+const parsedTraceLookupWindowDays = Number(
+  env.HDX_MCP_TRACE_LOOKUP_WINDOW_DAYS,
+);
+export const MCP_TRACE_LOOKUP_WINDOW_DAYS =
+  Number.isFinite(parsedTraceLookupWindowDays) &&
+  parsedTraceLookupWindowDays > 0
+    ? parsedTraceLookupWindowDays
+    : 3;
 export const IS_CI = NODE_ENV === 'test';
 export const IS_DEV = NODE_ENV === 'development';
 export const IS_PROD = NODE_ENV === 'production';

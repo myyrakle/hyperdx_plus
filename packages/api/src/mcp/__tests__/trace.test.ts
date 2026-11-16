@@ -483,14 +483,14 @@ describe('MCP Trace Tools', () => {
         expect(bodies).not.toContain('wf-window out-of-window log');
       });
 
-      it('should default to a 7-day window when traceId is passed without startTime', async () => {
+      it('should default to a 3-day window when traceId is passed without startTime', async () => {
         // The seeded spans are 5 minutes old, which the generic 15-minute
-        // default would also cover, so also check a 3-day-old trace.
-        const MID_TRACE_ID = 'wfwin0003daysold000000000000000a';
-        const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+        // default would also cover, so also check a 2-day-old trace.
+        const MID_TRACE_ID = 'wfwin0002daysold000000000000000a';
+        const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
         await bulkInsertTraces([
           {
-            Timestamp: threeDaysAgo,
+            Timestamp: twoDaysAgo,
             TraceId: MID_TRACE_ID,
             SpanId: 'wfwin_mid_root01',
             ParentSpanId: '',
@@ -523,7 +523,7 @@ describe('MCP Trace Tools', () => {
         expect(midOutput.spanCount).toBeGreaterThanOrEqual(1);
       });
 
-      it('should not find a trace older than 7 days without startTime, but respect an explicit startTime', async () => {
+      it('should not find a trace older than 3 days without startTime, but respect an explicit startTime', async () => {
         const OLD_TRACE_ID = 'wfwin0010daysold000000000000000b';
         const tenDaysAgo = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000);
         await bulkInsertTraces([
@@ -551,7 +551,7 @@ describe('MCP Trace Tools', () => {
         expect(defaultWindow.isError).toBeFalsy();
         const defaultOutput = JSON.parse(getFirstText(defaultWindow));
         expect(defaultOutput.result).toBeNull();
-        expect(defaultOutput.hint).toContain('7 days');
+        expect(defaultOutput.hint).toContain('3 days');
         expect(defaultOutput.hint).toContain('startTime');
 
         const explicit = await callTool(client, 'clickstack_trace_waterfall', {

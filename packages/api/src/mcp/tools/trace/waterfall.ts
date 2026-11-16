@@ -10,6 +10,7 @@ import {
 import ms from 'ms';
 import { z } from 'zod';
 
+import { MCP_TRACE_LOOKUP_WINDOW_DAYS } from '@/config';
 import { getConnectionById } from '@/controllers/connection';
 import { getSource } from '@/controllers/sources';
 import {
@@ -28,8 +29,11 @@ import { mcpUserError } from '@/mcp/utils/errors';
  * and a TraceId bloom-filter lookup across them is expensive). The generic
  * 15-minute default is too narrow for "look up this trace" calls.
  */
-const TRACE_ID_LOOKUP_DEFAULT_WINDOW_MS = ms('7d');
-const TRACE_ID_LOOKUP_DEFAULT_WINDOW_LABEL = '7 days';
+const TRACE_ID_LOOKUP_DEFAULT_WINDOW_MS =
+  MCP_TRACE_LOOKUP_WINDOW_DAYS * ms('1d');
+const TRACE_ID_LOOKUP_DEFAULT_WINDOW_LABEL = `${MCP_TRACE_LOOKUP_WINDOW_DAYS} ${
+  MCP_TRACE_LOOKUP_WINDOW_DAYS === 1 ? 'day' : 'days'
+}`;
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
@@ -239,7 +243,8 @@ export function registerTraceWaterfall({
     },
     async (rawInput: TraceInput) => {
       const input = traceSchema.parse(rawInput);
-      // A traceId lookup without an explicit startTime gets a 7-day window
+      // A traceId lookup without an explicit startTime gets a default window
+      // (HDX_MCP_TRACE_LOOKUP_WINDOW_DAYS, default 3 days)
       // (instead of the generic 15-minute default) so the span/log queries
       // stay bounded without being too narrow to find the trace.
       let startTime = input.startTime;
